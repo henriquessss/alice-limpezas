@@ -71,7 +71,9 @@ function LocaisDoCliente({ clienteId }: { clienteId: string }) {
     void executar(() => operacoes.apagarLocal(local.id));
   };
 
-  const entrada = "h-9 w-full rounded-md border border-line bg-white px-2 text-sm";
+  const entrada = "h-10 w-full rounded-md border border-line bg-white px-2 text-sm";
+  const linha = "grid grid-cols-2 gap-1.5 rounded-lg border border-line p-2 sm:grid-cols-[1fr_1fr_5rem_5rem_auto] sm:items-center sm:border-0 sm:p-0";
+  const largo = "col-span-2 sm:col-span-1";
 
   return (
     <fieldset className="rounded-lg border border-line p-3">
@@ -80,20 +82,22 @@ function LocaisDoCliente({ clienteId }: { clienteId: string }) {
       {erro && <div role="alert" className="mt-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-800">{erro}</div>}
       <div className="mt-3 grid gap-2">
         {locais?.map((l) => (
-          <div key={l.id} className="grid grid-cols-[1fr_1fr_5rem_5rem_auto] items-center gap-1.5">
-            <input defaultValue={l.nome} onBlur={(e) => guardarCampo(l, "nome", e.target.value)} aria-label="Nome do local" className={entrada} />
-            <input defaultValue={l.morada ?? ""} onBlur={(e) => guardarCampo(l, "morada", e.target.value)} aria-label="Morada" placeholder="Morada" className={entrada} />
+          <div key={l.id} className={linha}>
+            <input defaultValue={l.nome} onBlur={(e) => guardarCampo(l, "nome", e.target.value)} aria-label="Nome do local" className={`${entrada} ${largo}`} />
+            <input defaultValue={l.morada ?? ""} onBlur={(e) => guardarCampo(l, "morada", e.target.value)} aria-label="Morada" placeholder="Morada" className={`${entrada} ${largo}`} />
             <input defaultValue={l.preco_acordado ?? ""} onBlur={(e) => guardarCampo(l, "preco_acordado", e.target.value)} aria-label="Preço acordado" placeholder="€" inputMode="decimal" className={`${entrada} text-right`} />
             <input defaultValue={l.valor_funcionaria ?? ""} onBlur={(e) => guardarCampo(l, "valor_funcionaria", e.target.value)} aria-label="Valor à funcionária" placeholder="func." inputMode="decimal" className={`${entrada} text-right`} />
-            <button type="button" onClick={() => remover(l)} aria-label={`Apagar ${l.nome}`} className="h-9 px-2 text-slate-500 hover:text-rose-700">×</button>
+            <button type="button" onClick={() => remover(l)} aria-label={`Apagar ${l.nome}`} className="col-span-2 h-10 justify-self-end px-2 text-xs font-semibold text-slate-500 hover:text-rose-700 sm:col-span-1 sm:text-base">
+              <span className="sm:hidden">Apagar</span><span className="hidden sm:inline">×</span>
+            </button>
           </div>
         ))}
-        <div className="grid grid-cols-[1fr_1fr_5rem_5rem_auto] items-center gap-1.5">
-          <input value={novo.nome} onChange={(e) => setNovo({ ...novo, nome: e.target.value })} placeholder="Novo local" aria-label="Nome do novo local" className={entrada} />
-          <input value={novo.morada} onChange={(e) => setNovo({ ...novo, morada: e.target.value })} placeholder="Morada" aria-label="Morada do novo local" className={entrada} />
+        <div className={`${linha} border-dashed`}>
+          <input value={novo.nome} onChange={(e) => setNovo({ ...novo, nome: e.target.value })} placeholder="Novo local" aria-label="Nome do novo local" className={`${entrada} ${largo}`} />
+          <input value={novo.morada} onChange={(e) => setNovo({ ...novo, morada: e.target.value })} placeholder="Morada" aria-label="Morada do novo local" className={`${entrada} ${largo}`} />
           <input value={novo.preco} onChange={(e) => setNovo({ ...novo, preco: e.target.value })} placeholder="€" aria-label="Preço acordado do novo local" inputMode="decimal" className={`${entrada} text-right`} />
           <input value={novo.funcionaria} onChange={(e) => setNovo({ ...novo, funcionaria: e.target.value })} placeholder="func." aria-label="Valor à funcionária do novo local" inputMode="decimal" className={`${entrada} text-right`} />
-          <button type="button" onClick={adicionar} className="botao-secundario h-9 px-3 text-xs">+</button>
+          <button type="button" onClick={adicionar} className="botao-secundario col-span-2 h-10 px-3 text-xs sm:col-span-1">+ Adicionar</button>
         </div>
       </div>
     </fieldset>
@@ -131,7 +135,7 @@ export function ClientesPage() {
         </div>
         <div className="flex items-center gap-3">
           <label className="flex items-center gap-2 text-sm text-slate-600">
-            <input type="checkbox" checked={mostrarInativos} onChange={(e) => setMostrarInativos(e.target.checked)} className="h-4 w-4 accent-accent" />
+            <input type="checkbox" checked={mostrarInativos} onChange={(e) => setMostrarInativos(e.target.checked)} className="h-5 w-5 accent-accent" />
             Mostrar inativos
           </label>
           <button type="button" onClick={() => setFormulario({ modo: "novo" })} className="botao-primario">+ Novo cliente</button>
@@ -237,7 +241,7 @@ function FormCliente({ cliente, aoFechar, aoGuardar }: { cliente?: Cliente; aoFe
         </label>
         {cliente && (
           <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={ativo} onChange={(e) => setAtivo(e.target.checked)} className="h-4 w-4 accent-accent" />
+            <input type="checkbox" checked={ativo} onChange={(e) => setAtivo(e.target.checked)} className="h-5 w-5 accent-accent" />
             Cliente ativo (aparece ao marcar)
           </label>
         )}

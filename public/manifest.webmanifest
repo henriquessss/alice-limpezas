@@ -1,0 +1,14 @@
+{
+  "name": "Alice Limpezas",
+  "short_name": "Alice",
+  "description": "Marcações, pagamentos à equipa e despesas da Alice Limpezas.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f4f8fc",
+  "theme_color": "#0f3f6e",
+  "lang": "pt",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }
+  ]
+}

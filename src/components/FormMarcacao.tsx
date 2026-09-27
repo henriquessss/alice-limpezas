@@ -208,11 +208,11 @@ export function FormMarcacao({ clientes, locais, funcionarias, marcacao, dataIni
         </div>
         <div className="grid grid-cols-2 gap-3 text-sm">
           <label className="flex items-center gap-2">
-            <input type="checkbox" checked={clientePagou} onChange={(e) => setClientePagou(e.target.checked)} className="h-4 w-4 accent-accent" />
+            <input type="checkbox" checked={clientePagou} onChange={(e) => setClientePagou(e.target.checked)} className="h-5 w-5 accent-accent" />
             Cliente pagou
           </label>
           <label className="flex items-center gap-2">
-            <input type="checkbox" checked={funcionariaPaga} onChange={(e) => setFuncionariaPaga(e.target.checked)} className="h-4 w-4 accent-accent" />
+            <input type="checkbox" checked={funcionariaPaga} onChange={(e) => setFuncionariaPaga(e.target.checked)} className="h-5 w-5 accent-accent" />
             Funcionária paga
           </label>
         </div>

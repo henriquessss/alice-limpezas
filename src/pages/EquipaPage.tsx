@@ -117,7 +117,7 @@ function FormFuncionaria({ funcionaria, aoFechar, aoGuardar }: { funcionaria?: F
         </label>
         {funcionaria && (
           <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={ativa} onChange={(e) => setAtiva(e.target.checked)} className="h-4 w-4 accent-accent" />
+            <input type="checkbox" checked={ativa} onChange={(e) => setAtiva(e.target.checked)} className="h-5 w-5 accent-accent" />
             Ativa (aparece ao marcar)
           </label>
         )}

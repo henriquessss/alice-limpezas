@@ -14,8 +14,11 @@
 html, body, #root { max-width: 100%; }
 body { margin: 0; min-width: 320px; min-height: 100vh; min-height: 100dvh; }
 button, input, select, textarea { font: inherit; }
+/* 16px nos campos: abaixo disso o Safari iOS faz zoom ao focar. */
+input, select, textarea { font-size: 16px; }
 html { -webkit-text-size-adjust: 100%; }
-button { cursor: pointer; }
+button { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+body { overscroll-behavior-y: none; }
 h1, h2.titulo { font-family: Georgia, Cambria, "Times New Roman", serif; font-weight: 400; letter-spacing: -0.01em; }
 ::selection { background: #cfe6f7; color: #0f3f6e; }
 :focus-visible { outline: 2px solid #1e6fae; outline-offset: 2px; }
