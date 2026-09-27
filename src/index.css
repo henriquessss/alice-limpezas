@@ -1,0 +1,38 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #1c2a24;
+  background: #f5f7f5;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* { box-sizing: border-box; }
+html, body, #root { max-width: 100%; }
+body { margin: 0; min-width: 320px; min-height: 100vh; min-height: 100dvh; }
+button, input, select, textarea { font: inherit; }
+html { -webkit-text-size-adjust: 100%; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid #0f8a6a; outline-offset: 2px; }
+
+.campo {
+  @apply h-11 w-full rounded-lg border border-line bg-white px-3 text-ink;
+}
+.rotulo {
+  @apply mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-600;
+}
+.botao {
+  @apply inline-flex h-10 items-center justify-center rounded-full px-4 text-sm font-semibold transition disabled:opacity-50;
+}
+.botao-primario {
+  @apply botao bg-accent text-white hover:bg-[#0c7058];
+}
+.botao-secundario {
+  @apply botao border border-line bg-white text-ink hover:bg-sand;
+}
+.painel {
+  @apply rounded-xl border border-line bg-white shadow-panel;
+}

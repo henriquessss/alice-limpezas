@@ -1,0 +1,99 @@
+import { supabase } from "./supabase";
+import { dadosDeExemplo } from "./exemplo";
+
+export type Tabela = "clientes" | "funcionarias" | "marcacoes" | "despesas";
+
+export interface Intervalo {
+  coluna: string;
+  de: string;
+  ate: string;
+}
+
+export interface Repositorio {
+  listar<T>(tabela: Tabela, opcoes?: { entre?: Intervalo; ordenar?: string }): Promise<T[]>;
+  inserir<T>(tabela: Tabela, linhas: Record<string, unknown>[]): Promise<T[]>;
+  atualizar(tabela: Tabela, ids: string[], valores: Record<string, unknown>): Promise<void>;
+  apagar(tabela: Tabela, id: string): Promise<void>;
+}
+
+function repositorioSupabase(): Repositorio {
+  const cliente = supabase!;
+  return {
+    async listar<T>(tabela: Tabela, opcoes?: { entre?: Intervalo; ordenar?: string }) {
+      let query = cliente.from(tabela).select("*");
+      if (opcoes?.entre) query = query.gte(opcoes.entre.coluna, opcoes.entre.de).lte(opcoes.entre.coluna, opcoes.entre.ate);
+      if (opcoes?.ordenar) query = query.order(opcoes.ordenar);
+      const { data, error } = await query;
+      if (error) throw new Error(error.message);
+      return (data ?? []) as T[];
+    },
+    async inserir<T>(tabela: Tabela, linhas: Record<string, unknown>[]) {
+      const { data, error } = await cliente.from(tabela).insert(linhas).select("*");
+      if (error) throw new Error(error.message);
+      return (data ?? []) as T[];
+    },
+    async atualizar(tabela: Tabela, ids: string[], valores: Record<string, unknown>) {
+      if (ids.length === 0) return;
+      const { error } = await cliente.from(tabela).update(valores).in("id", ids);
+      if (error) throw new Error(error.message);
+    },
+    async apagar(tabela: Tabela, id: string) {
+      const { error } = await cliente.from(tabela).delete().eq("id", id);
+      if (error) throw new Error(error.message);
+    },
+  };
+}
+
+const CHAVE_LOCAL = "casa-pronta:dados";
+
+type Linha = Record<string, unknown> & { id: string };
+type Base = Record<Tabela, Linha[]>;
+
+function lerBase(): Base {
+  const guardado = window.localStorage.getItem(CHAVE_LOCAL);
+  if (guardado) return JSON.parse(guardado) as Base;
+  const inicial = JSON.parse(JSON.stringify(dadosDeExemplo())) as Base;
+  guardarBase(inicial);
+  return inicial;
+}
+
+function guardarBase(base: Base) {
+  window.localStorage.setItem(CHAVE_LOCAL, JSON.stringify(base));
+}
+
+/** Modo de desenvolvimento/demonstração: tudo vive no localStorage do browser. */
+function repositorioLocal(): Repositorio {
+  return {
+    async listar<T>(tabela: Tabela, opcoes?: { entre?: Intervalo; ordenar?: string }) {
+      let linhas = lerBase()[tabela];
+      const entre = opcoes?.entre;
+      if (entre) linhas = linhas.filter((l) => String(l[entre.coluna]) >= entre.de && String(l[entre.coluna]) <= entre.ate);
+      const ordenar = opcoes?.ordenar;
+      if (ordenar) linhas = [...linhas].sort((a, b) => String(a[ordenar]).localeCompare(String(b[ordenar])));
+      return linhas as T[];
+    },
+    async inserir<T>(tabela: Tabela, linhas: Record<string, unknown>[]) {
+      const base = lerBase();
+      const novas = linhas.map((l) => ({ ...l, id: crypto.randomUUID() }));
+      base[tabela].push(...novas);
+      guardarBase(base);
+      return novas as T[];
+    },
+    async atualizar(tabela: Tabela, ids: string[], valores: Record<string, unknown>) {
+      const base = lerBase();
+      base[tabela] = base[tabela].map((l) => (ids.includes(l.id) ? { ...l, ...valores } : l));
+      guardarBase(base);
+    },
+    async apagar(tabela: Tabela, id: string) {
+      const base = lerBase();
+      base[tabela] = base[tabela].filter((l) => l.id !== id);
+      guardarBase(base);
+    },
+  };
+}
+
+export const repositorio: Repositorio = supabase ? repositorioSupabase() : repositorioLocal();
+
+export function apagarDadosLocais() {
+  window.localStorage.removeItem(CHAVE_LOCAL);
+}
