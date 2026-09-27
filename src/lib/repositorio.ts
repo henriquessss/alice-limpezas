@@ -1,7 +1,8 @@
 import { supabase } from "./supabase";
 import { dadosDeExemplo } from "./exemplo";
 
-export type Tabela = "clientes" | "funcionarias" | "marcacoes" | "despesas";
+export type Tabela = "clientes" | "clientes_locais" | "funcionarias" | "marcacoes" | "despesas";
+const TABELAS: Tabela[] = ["clientes", "clientes_locais", "funcionarias", "marcacoes", "despesas"];
 
 export interface Intervalo {
   coluna: string;
@@ -10,7 +11,7 @@ export interface Intervalo {
 }
 
 export interface Repositorio {
-  listar<T>(tabela: Tabela, opcoes?: { entre?: Intervalo; ordenar?: string }): Promise<T[]>;
+  listar<T>(tabela: Tabela, opcoes?: { entre?: Intervalo; ordenar?: string; igual?: Record<string, string> }): Promise<T[]>;
   inserir<T>(tabela: Tabela, linhas: Record<string, unknown>[]): Promise<T[]>;
   atualizar(tabela: Tabela, ids: string[], valores: Record<string, unknown>): Promise<void>;
   apagar(tabela: Tabela, id: string): Promise<void>;
@@ -19,9 +20,10 @@ export interface Repositorio {
 function repositorioSupabase(): Repositorio {
   const cliente = supabase!;
   return {
-    async listar<T>(tabela: Tabela, opcoes?: { entre?: Intervalo; ordenar?: string }) {
+    async listar<T>(tabela: Tabela, opcoes?: { entre?: Intervalo; ordenar?: string; igual?: Record<string, string> }) {
       let query = cliente.from(tabela).select("*");
       if (opcoes?.entre) query = query.gte(opcoes.entre.coluna, opcoes.entre.de).lte(opcoes.entre.coluna, opcoes.entre.ate);
+      for (const [coluna, valor] of Object.entries(opcoes?.igual ?? {})) query = query.eq(coluna, valor);
       if (opcoes?.ordenar) query = query.order(opcoes.ordenar);
       const { data, error } = await query;
       if (error) throw new Error(error.message);
@@ -51,7 +53,11 @@ type Base = Record<Tabela, Linha[]>;
 
 function lerBase(): Base {
   const guardado = window.localStorage.getItem(CHAVE_LOCAL);
-  if (guardado) return JSON.parse(guardado) as Base;
+  if (guardado) {
+    const base = JSON.parse(guardado) as Partial<Base>;
+    for (const tabela of TABELAS) base[tabela] ??= [];
+    return base as Base;
+  }
   const inicial = JSON.parse(JSON.stringify(dadosDeExemplo())) as Base;
   guardarBase(inicial);
   return inicial;
@@ -64,10 +70,11 @@ function guardarBase(base: Base) {
 /** Modo de desenvolvimento/demonstração: tudo vive no localStorage do browser. */
 function repositorioLocal(): Repositorio {
   return {
-    async listar<T>(tabela: Tabela, opcoes?: { entre?: Intervalo; ordenar?: string }) {
+    async listar<T>(tabela: Tabela, opcoes?: { entre?: Intervalo; ordenar?: string; igual?: Record<string, string> }) {
       let linhas = lerBase()[tabela];
       const entre = opcoes?.entre;
       if (entre) linhas = linhas.filter((l) => String(l[entre.coluna]) >= entre.de && String(l[entre.coluna]) <= entre.ate);
+      for (const [coluna, valor] of Object.entries(opcoes?.igual ?? {})) linhas = linhas.filter((l) => l[coluna] === valor);
       const ordenar = opcoes?.ordenar;
       if (ordenar) linhas = [...linhas].sort((a, b) => String(a[ordenar]).localeCompare(String(b[ordenar])));
       return linhas as T[];

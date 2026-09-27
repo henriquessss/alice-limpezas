@@ -1,8 +1,9 @@
 import { mesAtual } from "./datas";
-import { valorSugeridoFuncionaria, type Cliente, type Despesa, type Funcionaria, type Marcacao } from "./modelo";
+import { valorSugeridoFuncionaria, type Cliente, type Despesa, type Funcionaria, type Local, type Marcacao } from "./modelo";
 
 type Base = {
   clientes: Cliente[];
+  clientes_locais: Local[];
   funcionarias: Funcionaria[];
   marcacoes: Marcacao[];
   despesas: Despesa[];
@@ -39,6 +40,12 @@ export function dadosDeExemplo(): Base {
     cliente("c-al", "Apartamento Alojamento Local", "Rua Augusta 100, Lisboa"),
     cliente("c-isabel", "D. Isabel Lourenço", "Rua Verde 7, Cascais"),
     cliente("c-vitor", "Limpeza pós-obra — Sr. Vítor", "Rua Nova 21, Almada"),
+    { ...cliente("c-pv", "Paradise Villas", "Algarve"), origem: "paradise-villas", referencia_externa: "paradise-villas" },
+  ];
+
+  const clientes_locais: Local[] = [
+    { id: "l-paulo", cliente_id: "c-pv", nome: "Villa Paulo", morada: "Vale do Lobo", preco_acordado: 120, valor_funcionaria: 60, ativo: true, referencia_externa: "villa-paulo" },
+    { id: "l-mar", cliente_id: "c-pv", nome: "Villa Mar", morada: "Quinta do Lago", preco_acordado: 150, valor_funcionaria: 70, ativo: true, referencia_externa: "villa-mar" },
   ];
 
   const hoje = new Date().getDate();
@@ -51,9 +58,11 @@ export function dadosDeExemplo(): Base {
     valor: number,
     pago: boolean,
     funcionariaPaga: boolean,
+    local_id: string | null = null,
   ): Marcacao => ({
     id: `m-${++n}`,
     cliente_id,
+    local_id,
     funcionaria_id,
     data: dia(d),
     hora,
@@ -62,6 +71,9 @@ export function dadosDeExemplo(): Base {
     cliente_pagou: pago,
     funcionaria_paga: funcionariaPaga,
     notas: null,
+    origem: "manual",
+    referencia_externa: null,
+    detalhes: null,
   });
 
   const marcacoes: Marcacao[] = [];
@@ -77,6 +89,18 @@ export function dadosDeExemplo(): Base {
     if (base + 4 <= 28) marcacoes.push(marcacao(base + 4, "15:00", "c-isabel", "f-catia", 60, passado && semana < 2, semana < 2));
   }
   marcacoes.push(marcacao(17, "08:30", "c-vitor", "f-marta", 180, false, false));
+  marcacoes.push({
+    ...marcacao(12, "10:00", "c-pv", "f-ana", 120, 12 < hoje, false, "l-paulo"),
+    origem: "paradise-villas",
+    referencia_externa: "reserva-exemplo-1",
+    detalhes: { nome_hospede: "Family Smith", numero_hospedes: 4, checkin: dia(5), checkout: dia(12), extras: [{ nome: "Berço", quantidade: 1 }] },
+  });
+  marcacoes.push({
+    ...marcacao(26, "10:00", "c-pv", "f-marta", 150, false, false, "l-mar"),
+    origem: "paradise-villas",
+    referencia_externa: "reserva-exemplo-2",
+    detalhes: { nome_hospede: "M. Dupont", numero_hospedes: 6, checkin: dia(19), checkout: dia(26), extras: [] },
+  });
 
   const despesa = (d: number, tipo: Despesa["tipo"], descricao: string, fornecedor: string, valor: number): Despesa => ({
     id: `d-${d}-${valor}`,
@@ -98,5 +122,5 @@ export function dadosDeExemplo(): Base {
     despesa(23, "Consumíveis", "Sacos de lixo industriais", "Makro", 18.5),
   ];
 
-  return { clientes, funcionarias, marcacoes, despesas };
+  return { clientes, clientes_locais, funcionarias, marcacoes, despesas };
 }

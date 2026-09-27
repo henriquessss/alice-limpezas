@@ -11,6 +11,18 @@ export interface Cliente {
   referencia_externa: string | null;
 }
 
+/** Um sítio onde se limpa, quando o cliente tem vários (villas, apartamentos). */
+export interface Local {
+  id: string;
+  cliente_id: string;
+  nome: string;
+  morada: string | null;
+  preco_acordado: number | null;
+  valor_funcionaria: number | null;
+  ativo: boolean;
+  referencia_externa: string | null;
+}
+
 export interface Funcionaria {
   id: string;
   nome: string;
@@ -18,9 +30,18 @@ export interface Funcionaria {
   ativa: boolean;
 }
 
+export interface DetalhesPedido {
+  nome_hospede?: string;
+  numero_hospedes?: number;
+  checkin?: string;
+  checkout?: string;
+  extras?: { nome: string; quantidade: number }[];
+}
+
 export interface Marcacao {
   id: string;
   cliente_id: string;
+  local_id: string | null;
   funcionaria_id: string | null;
   data: string;
   hora: string | null;
@@ -29,6 +50,15 @@ export interface Marcacao {
   cliente_pagou: boolean;
   funcionaria_paga: boolean;
   notas: string | null;
+  origem: string;
+  referencia_externa: string | null;
+  detalhes: DetalhesPedido | null;
+}
+
+export function nomeDaMarcacao(m: Pick<Marcacao, "cliente_id" | "local_id">, clientes: Map<string, string>, locais: Map<string, string>): string {
+  const cliente = clientes.get(m.cliente_id) ?? "—";
+  const local = m.local_id ? locais.get(m.local_id) : undefined;
+  return local ? `${cliente} · ${local}` : cliente;
 }
 
 export const TIPOS_DESPESA = [

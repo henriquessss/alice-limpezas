@@ -2,11 +2,13 @@ import { useState, type FormEvent } from "react";
 import { operacoes, type NovaMarcacao } from "../lib/dados";
 import { somarDias } from "../lib/datas";
 import { mensagemDeErro } from "../lib/erros";
-import { valorSugeridoFuncionaria, type Cliente, type Funcionaria, type Marcacao } from "../lib/modelo";
+import { dataCurta } from "../lib/format";
+import { valorSugeridoFuncionaria, type Cliente, type Funcionaria, type Local, type Marcacao } from "../lib/modelo";
 import { Dialogo } from "./Dialogo";
 
 interface Props {
   clientes: Cliente[];
+  locais: Local[];
   funcionarias: Funcionaria[];
   /** Sem `marcacao` cria; com `marcacao` edita. */
   marcacao?: Marcacao;
@@ -15,13 +17,18 @@ interface Props {
   aoGuardar: () => Promise<void>;
 }
 
-export function FormMarcacao({ clientes, funcionarias, marcacao, dataInicial, aoFechar, aoGuardar }: Props) {
+function texto(valor: number | null | undefined): string {
+  return valor === null || valor === undefined ? "" : String(valor);
+}
+
+export function FormMarcacao({ clientes, locais, funcionarias, marcacao, dataInicial, aoFechar, aoGuardar }: Props) {
   const [clienteId, setClienteId] = useState(marcacao?.cliente_id ?? clientes[0]?.id ?? "");
+  const [localId, setLocalId] = useState(marcacao?.local_id ?? "");
   const [funcionariaId, setFuncionariaId] = useState(marcacao?.funcionaria_id ?? "");
   const [data, setData] = useState(marcacao?.data ?? dataInicial ?? "");
   const [hora, setHora] = useState(marcacao?.hora?.slice(0, 5) ?? "09:00");
-  const [valorCobrado, setValorCobrado] = useState(marcacao ? String(marcacao.valor_cobrado) : "");
-  const [valorFuncionaria, setValorFuncionaria] = useState(marcacao ? String(marcacao.valor_funcionaria) : "");
+  const [valorCobrado, setValorCobrado] = useState(texto(marcacao?.valor_cobrado));
+  const [valorFuncionaria, setValorFuncionaria] = useState(texto(marcacao?.valor_funcionaria));
   const [valorFuncionariaManual, setValorFuncionariaManual] = useState(Boolean(marcacao));
   const [clientePagou, setClientePagou] = useState(marcacao?.cliente_pagou ?? false);
   const [funcionariaPaga, setFuncionariaPaga] = useState(marcacao?.funcionaria_paga ?? false);
@@ -30,14 +37,37 @@ export function FormMarcacao({ clientes, funcionarias, marcacao, dataInicial, ao
   const [aGuardar, setAGuardar] = useState(false);
   const [erro, setErro] = useState<string>();
 
+  const locaisDoCliente = locais.filter((l) => l.cliente_id === clienteId && (l.ativo || l.id === localId));
   const cobrado = Number(valorCobrado.replace(",", ".")) || 0;
   const sugerido = valorSugeridoFuncionaria(cobrado);
+  const integracao = marcacao && marcacao.origem !== "manual";
 
   const mudarValorCobrado = (valor: string) => {
     setValorCobrado(valor);
     if (!valorFuncionariaManual) {
       const n = Number(valor.replace(",", ".")) || 0;
       setValorFuncionaria(n > 0 ? String(valorSugeridoFuncionaria(n)) : "");
+    }
+  };
+
+  const mudarCliente = (id: string) => {
+    setClienteId(id);
+    setLocalId("");
+  };
+
+  // Escolher um local preenche os valores acordados; a gestora pode corrigir depois.
+  const mudarLocal = (id: string) => {
+    setLocalId(id);
+    const local = locais.find((l) => l.id === id);
+    if (!local) return;
+    if (local.preco_acordado !== null) {
+      setValorCobrado(String(local.preco_acordado));
+      if (local.valor_funcionaria !== null) {
+        setValorFuncionaria(String(local.valor_funcionaria));
+        setValorFuncionariaManual(true);
+      } else if (!valorFuncionariaManual) {
+        setValorFuncionaria(String(valorSugeridoFuncionaria(local.preco_acordado)));
+      }
     }
   };
 
@@ -48,6 +78,7 @@ export function FormMarcacao({ clientes, funcionarias, marcacao, dataInicial, ao
     if (!data) return setErro("Indique a data.");
     const base: NovaMarcacao = {
       cliente_id: clienteId,
+      local_id: localId || null,
       funcionaria_id: funcionariaId || null,
       data,
       hora: hora || null,
@@ -91,6 +122,8 @@ export function FormMarcacao({ clientes, funcionarias, marcacao, dataInicial, ao
     }
   };
 
+  const detalhes = marcacao?.detalhes;
+
   return (
     <Dialogo titulo={marcacao ? "Editar marcação" : "Nova marcação"} aoFechar={aoFechar}>
       {clientes.length === 0 && (
@@ -98,16 +131,40 @@ export function FormMarcacao({ clientes, funcionarias, marcacao, dataInicial, ao
           Ainda não há clientes. Crie um na página Clientes antes de marcar.
         </p>
       )}
+      {integracao && (
+        <div className="mb-4 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-900">
+          <p className="font-semibold">Pedido recebido de {marcacao.origem}</p>
+          {detalhes && (
+            <ul className="mt-1 grid gap-0.5 text-xs">
+              {detalhes.nome_hospede && <li>Hóspede: {detalhes.nome_hospede}{detalhes.numero_hospedes ? ` (${detalhes.numero_hospedes} pessoas)` : ""}</li>}
+              {detalhes.checkin && detalhes.checkout && <li>Estadia: {dataCurta(detalhes.checkin)} → {dataCurta(detalhes.checkout)}</li>}
+              <li>Extras: {detalhes.extras?.length ? detalhes.extras.map((e) => `${e.quantidade}× ${e.nome}`).join(", ") : "nenhum"}</li>
+            </ul>
+          )}
+          <p className="mt-1 text-xs">Cliente, local e data vêm do pedido; se mudarem lá, o pedido é reenviado e sobrepõe-se.</p>
+        </div>
+      )}
       <form onSubmit={submeter} className="grid gap-4">
         <label>
           <span className="rotulo">Cliente</span>
-          <select required value={clienteId} onChange={(e) => setClienteId(e.target.value)} className="campo">
+          <select required value={clienteId} onChange={(e) => mudarCliente(e.target.value)} disabled={integracao} className="campo">
             <option value="" disabled>Escolher…</option>
             {clientes.filter((c) => c.ativo || c.id === clienteId).map((c) => (
               <option key={c.id} value={c.id}>{c.nome}</option>
             ))}
           </select>
         </label>
+        {locaisDoCliente.length > 0 && (
+          <label>
+            <span className="rotulo">Local</span>
+            <select value={localId} onChange={(e) => mudarLocal(e.target.value)} disabled={integracao} className="campo">
+              <option value="">Sem local específico</option>
+              {locaisDoCliente.map((l) => (
+                <option key={l.id} value={l.id}>{l.nome}{l.preco_acordado !== null ? ` — ${l.preco_acordado.toFixed(2)} €` : ""}</option>
+              ))}
+            </select>
+          </label>
+        )}
         <div className="grid grid-cols-2 gap-3">
           <label>
             <span className="rotulo">Data</span>

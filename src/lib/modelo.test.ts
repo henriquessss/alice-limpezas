@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   despesasPorTipo,
   estadoDaMarcacao,
+  nomeDaMarcacao,
   resumoDoMes,
   resumoPorFuncionaria,
   valorSugeridoFuncionaria,
@@ -16,6 +17,7 @@ function marcacao(parcial: Partial<Marcacao>): Marcacao {
   return {
     id: parcial.id ?? crypto.randomUUID(),
     cliente_id: "c1",
+    local_id: null,
     funcionaria_id: "f1",
     data: "2026-09-10",
     hora: "09:00",
@@ -24,9 +26,22 @@ function marcacao(parcial: Partial<Marcacao>): Marcacao {
     cliente_pagou: false,
     funcionaria_paga: false,
     notas: null,
+    origem: "manual",
+    referencia_externa: null,
+    detalhes: null,
     ...parcial,
   };
 }
+
+describe("nomeDaMarcacao", () => {
+  const clientes = new Map([["c1", "Paradise Villas"]]);
+  const locais = new Map([["l1", "Villa Paulo"]]);
+  it("junta cliente e local quando há local", () => {
+    expect(nomeDaMarcacao({ cliente_id: "c1", local_id: "l1" }, clientes, locais)).toBe("Paradise Villas · Villa Paulo");
+    expect(nomeDaMarcacao({ cliente_id: "c1", local_id: null }, clientes, locais)).toBe("Paradise Villas");
+    expect(nomeDaMarcacao({ cliente_id: "x", local_id: null }, clientes, locais)).toBe("—");
+  });
+});
 
 describe("estadoDaMarcacao", () => {
   it("é recebido quando o cliente pagou, independentemente da data", () => {

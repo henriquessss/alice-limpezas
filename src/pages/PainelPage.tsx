@@ -7,7 +7,7 @@ import { useDadosDoMes } from "../lib/dados";
 import { grelhaDoMes, hojeIso, mesDe } from "../lib/datas";
 import { diaLongo, hora, moeda, moedaInteira, percentagem } from "../lib/format";
 import { useMes } from "../lib/mes";
-import { estadoDaMarcacao, resumoDoMes, type Marcacao } from "../lib/modelo";
+import { estadoDaMarcacao, nomeDaMarcacao, resumoDoMes, type Marcacao } from "../lib/modelo";
 
 const DIAS_SEMANA = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
 
@@ -37,6 +37,8 @@ export function PainelPage() {
   }
 
   const nomeCliente = new Map(dados.clientes.map((c) => [c.id, c.nome]));
+  const nomeLocal = new Map(dados.locais.map((l) => [l.id, l.nome]));
+  const nome = (m: Marcacao) => nomeDaMarcacao(m, nomeCliente, nomeLocal);
   const nomeFuncionaria = new Map(dados.funcionarias.map((f) => [f.id, f.nome]));
   const porDia = new Map<string, Marcacao[]>();
   for (const m of dados.marcacoes) porDia.set(m.data, [...(porDia.get(m.data) ?? []), m]);
@@ -100,7 +102,7 @@ export function PainelPage() {
                         style={{ borderLeft: `3px solid ${COR_ESTADO[estadoDaMarcacao(m, hoje)]}`, background: `${COR_ESTADO[estadoDaMarcacao(m, hoje)]}14` }}
                       >
                         <span className="hidden font-semibold sm:inline">{hora(m.hora)} </span>
-                        {nomeCliente.get(m.cliente_id) ?? "—"}
+                        {nome(m)}
                       </span>
                     ))}
                     {marcacoes.length > 3 && <span className="px-1 text-[11px] text-slate-500">+{marcacoes.length - 3}</span>}
@@ -135,7 +137,7 @@ export function PainelPage() {
                       <div className="flex items-baseline justify-between gap-3">
                         <span className="font-semibold text-ink">
                           <span className="mr-2 tabular-nums text-slate-500">{hora(m.hora)}</span>
-                          {nomeCliente.get(m.cliente_id) ?? "—"}
+                          {nome(m)}
                         </span>
                         <span className="tabular-nums text-sm font-semibold">{moeda(m.valor_cobrado)}</span>
                       </div>
@@ -158,6 +160,7 @@ export function PainelPage() {
       {formulario.modo !== "fechado" && (
         <FormMarcacao
           clientes={dados.clientes}
+          locais={dados.locais}
           funcionarias={dados.funcionarias}
           marcacao={formulario.modo === "editar" ? formulario.marcacao : undefined}
           dataInicial={formulario.modo === "nova" ? formulario.data : undefined}

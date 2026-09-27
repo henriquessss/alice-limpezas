@@ -8,7 +8,7 @@ import { hojeIso } from "../lib/datas";
 import { mensagemDeErro } from "../lib/erros";
 import { diaMes, moeda, percentagem } from "../lib/format";
 import { useMes } from "../lib/mes";
-import { CORES_DESPESA, despesasPorTipo, estadoDaMarcacao, resumoPorFuncionaria, type Despesa } from "../lib/modelo";
+import { CORES_DESPESA, despesasPorTipo, estadoDaMarcacao, nomeDaMarcacao, resumoPorFuncionaria, type Despesa } from "../lib/modelo";
 
 type Formulario = { modo: "fechado" } | { modo: "nova" } | { modo: "editar"; despesa: Despesa };
 
@@ -19,6 +19,8 @@ export function ContasPage() {
   const [formulario, setFormulario] = useState<Formulario>({ modo: "fechado" });
   const [erro, setErro] = useState<string>();
   const [ocupado, setOcupado] = useState(false);
+  // "cliente:<id>" ou "local:<id>"; vazio = tudo. Só filtra a tabela de receitas.
+  const [filtro, setFiltro] = useState("");
 
   const executar = async (acao: () => Promise<unknown>, fallback: string) => {
     setErro(undefined);
@@ -46,12 +48,18 @@ export function ContasPage() {
   if (dados.estado !== "pronto") return <>{cabecalho}<div className="mt-6"><Carregamento dados={dados} /></div></>;
 
   const nomeCliente = new Map(dados.clientes.map((c) => [c.id, c.nome]));
+  const nomeLocal = new Map(dados.locais.map((l) => [l.id, l.nome]));
+  const [tipoFiltro, idFiltro] = filtro.split(":");
+  const receitas = dados.marcacoes.filter((m) =>
+    !filtro || (tipoFiltro === "cliente" ? m.cliente_id === idFiltro : m.local_id === idFiltro),
+  );
+  const clientesComMarcacoes = dados.clientes.filter((c) => dados.marcacoes.some((m) => m.cliente_id === c.id));
   const equipa = resumoPorFuncionaria(dados.funcionarias, dados.marcacoes);
   const totalEquipa = equipa.reduce((s, r) => s + r.aReceber, 0);
   const totalPorPagar = equipa.reduce((s, r) => s + r.porPagar, 0);
   const porTipo = despesasPorTipo(dados.despesas);
   const totalDespesas = dados.despesas.reduce((s, d) => s + d.valor, 0);
-  const totalReceita = dados.marcacoes.reduce((s, m) => s + m.valor_cobrado, 0);
+  const totalReceita = receitas.reduce((s, m) => s + m.valor_cobrado, 0);
 
   return (
     <>
@@ -62,9 +70,23 @@ export function ContasPage() {
         <div className="painel overflow-hidden">
           <div className="flex items-center justify-between border-b border-line px-4 py-3">
             <h2 className="text-xs font-bold uppercase tracking-wider text-slate-600">Receitas do mês</h2>
-            <span className="text-xs text-slate-500">clicar no estado para alterar</span>
+            <div className="flex items-center gap-3">
+              <span className="hidden text-xs text-slate-500 sm:inline">clicar no estado para alterar</span>
+              {clientesComMarcacoes.length > 0 && (
+                <select value={filtro} onChange={(e) => setFiltro(e.target.value)} aria-label="Filtrar receitas" className="h-8 rounded-full border border-line bg-white px-2 text-xs">
+                  <option value="">Todos os clientes</option>
+                  {clientesComMarcacoes.map((c) => {
+                    const locais = dados.locais.filter((l) => l.cliente_id === c.id && dados.marcacoes.some((m) => m.local_id === l.id));
+                    return [
+                      <option key={c.id} value={`cliente:${c.id}`}>{c.nome}</option>,
+                      ...locais.map((l) => <option key={l.id} value={`local:${l.id}`}>{`  · ${l.nome}`}</option>),
+                    ];
+                  })}
+                </select>
+              )}
+            </div>
           </div>
-          {dados.marcacoes.length === 0 ? (
+          {receitas.length === 0 ? (
             <p className="px-4 py-10 text-center text-sm text-slate-500">Sem marcações neste mês.</p>
           ) : (
             <table className="w-full text-sm">
@@ -77,10 +99,10 @@ export function ContasPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-line">
-                {dados.marcacoes.map((m) => (
+                {receitas.map((m) => (
                   <tr key={m.id}>
                     <td className="px-4 py-2 tabular-nums text-slate-600">{diaMes(m.data)}</td>
-                    <td className="px-2 py-2 text-ink">{nomeCliente.get(m.cliente_id) ?? "—"}</td>
+                    <td className="px-2 py-2 text-ink">{nomeDaMarcacao(m, nomeCliente, nomeLocal)}</td>
                     <td className="px-2 py-2 text-right tabular-nums">{moeda(m.valor_cobrado)}</td>
                     <td className="px-4 py-2">
                       <Estado
