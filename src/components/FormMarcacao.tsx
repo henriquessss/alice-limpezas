@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { operacoes, type NovaMarcacao } from "../lib/dados";
 import { somarDias } from "../lib/datas";
 import { mensagemDeErro } from "../lib/erros";
+import { emailDaMarcacao, mailto } from "../lib/emailEquipa";
 import { dataCurta } from "../lib/format";
 import { valorSugeridoFuncionaria, type Cliente, type Funcionaria, type Local, type Marcacao } from "../lib/modelo";
 import { Dialogo } from "./Dialogo";
@@ -123,6 +124,14 @@ export function FormMarcacao({ clientes, locais, funcionarias, marcacao, dataIni
   };
 
   const detalhes = marcacao?.detalhes;
+  const funcionariaEscolhida = funcionarias.find((f) => f.id === funcionariaId);
+  const emailAviso = marcacao && funcionariaEscolhida?.email
+    ? emailDaMarcacao(
+        { ...marcacao, funcionaria_id: funcionariaEscolhida.id },
+        funcionariaEscolhida,
+        { clientes: new Map(clientes.map((c) => [c.id, c])), locais: new Map(locais.map((l) => [l.id, l])) },
+      )
+    : undefined;
 
   return (
     <Dialogo titulo={marcacao ? "Editar marcação" : "Nova marcação"} aoFechar={aoFechar}>
@@ -240,6 +249,20 @@ export function FormMarcacao({ clientes, locais, funcionarias, marcacao, dataIni
           )}
         </div>
       </form>
+      {marcacao && funcionariaEscolhida && (
+        <div className="mt-5 border-t border-line pt-4">
+          {emailAviso ? (
+            <a href={mailto(funcionariaEscolhida.email!, emailAviso.assunto, emailAviso.corpo)} className="botao-secundario w-full">
+              Avisar {funcionariaEscolhida.nome.split(" ")[0]} por email
+            </a>
+          ) : (
+            <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+              {funcionariaEscolhida.nome} não tem email. Acrescenta-o na página Equipa para a avisar daqui.
+            </p>
+          )}
+          <p className="mt-2 text-xs text-slate-500">Abre a tua app de email com o texto pronto. Se mudaste algo, guarda primeiro.</p>
+        </div>
+      )}
     </Dialogo>
   );
 }

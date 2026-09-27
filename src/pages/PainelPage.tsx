@@ -7,6 +7,7 @@ import { BotaoFlutuante } from "../components/Layout";
 import { SeletorMes } from "../components/SeletorMes";
 import { useDadosDoMes } from "../lib/dados";
 import { grelhaDoMes, hojeIso, mesDe } from "../lib/datas";
+import { emailDoPlano, mailto } from "../lib/emailEquipa";
 import { diaLongo, hora, moeda, moedaInteira, percentagem } from "../lib/format";
 import { useMes } from "../lib/mes";
 import { ROTULO_ESTADO, estadoDaMarcacao, nomeDaMarcacao, resumoDoMes, type Marcacao } from "../lib/modelo";
@@ -48,6 +49,10 @@ export function PainelPage() {
   const porDia = new Map<string, Marcacao[]>();
   for (const m of dados.marcacoes) porDia.set(m.data, [...(porDia.get(m.data) ?? []), m]);
   const doDia = porDia.get(dia) ?? [];
+  const nomes = { clientes: new Map(dados.clientes.map((c) => [c.id, c])), locais: new Map(dados.locais.map((l) => [l.id, l])) };
+  const equipaDoDia = dados.funcionarias
+    .map((f) => ({ funcionaria: f, marcacoes: doDia.filter((m) => m.funcionaria_id === f.id) }))
+    .filter((x) => x.marcacoes.length > 0);
 
   return (
     <>
@@ -160,6 +165,29 @@ export function PainelPage() {
                 );
               })}
             </ul>
+          )}
+          {equipaDoDia.length > 0 && (
+            <div className="border-t border-line px-4 py-3">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Enviar plano do dia</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {equipaDoDia.map(({ funcionaria, marcacoes }) => {
+                  const primeiro = funcionaria.nome.split(" ")[0];
+                  if (!funcionaria.email) {
+                    return (
+                      <span key={funcionaria.id} title="Sem email — acrescenta na Equipa" className="botao h-9 border border-dashed border-line px-3 text-xs text-slate-400">
+                        {primeiro} · sem email
+                      </span>
+                    );
+                  }
+                  const { assunto, corpo } = emailDoPlano(dia, funcionaria, marcacoes, nomes);
+                  return (
+                    <a key={funcionaria.id} href={mailto(funcionaria.email, assunto, corpo)} className="botao-secundario h-9 px-3 text-xs">
+                      {primeiro} · {marcacoes.length}
+                    </a>
+                  );
+                })}
+              </div>
+            </div>
           )}
         </div>
       </section>
