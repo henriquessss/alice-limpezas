@@ -44,7 +44,7 @@ export function EquipaPage() {
           <ul className="divide-y divide-line">
             {funcionarias.map((f) => (
               <li key={f.id}>
-                <button type="button" onClick={() => setFormulario({ modo: "editar", funcionaria: f })} className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-sand">
+                <button type="button" onClick={() => setFormulario({ modo: "editar", funcionaria: f })} className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-mist">
                   <span className="grid h-9 w-9 place-items-center rounded-full bg-accent/10 text-xs font-bold text-accent">{iniciais(f.nome)}</span>
                   <span className="flex-1">
                     <span className="block font-semibold text-ink">

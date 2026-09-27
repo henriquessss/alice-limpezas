@@ -88,7 +88,7 @@ export function PainelPage() {
                   key={celula.iso}
                   onClick={() => setDiaEscolhido(celula.iso)}
                   className={`min-h-[4.75rem] border-b border-r border-line p-1 text-left align-top transition sm:min-h-[5.5rem] ${
-                    celula.doMes ? "bg-white hover:bg-sand" : "bg-slate-50 text-slate-400"
+                    celula.doMes ? "bg-white hover:bg-mist" : "bg-slate-50 text-slate-400"
                   } ${escolhido ? "ring-2 ring-inset ring-accent" : ""}`}
                 >
                   <span className={`inline-grid h-6 w-6 place-items-center rounded-full text-xs font-semibold ${celula.iso === hoje ? "bg-accent text-white" : ""}`}>
@@ -133,7 +133,7 @@ export function PainelPage() {
                 const estado = estadoDaMarcacao(m, hoje);
                 return (
                   <li key={m.id}>
-                    <button type="button" onClick={() => setFormulario({ modo: "editar", marcacao: m })} className="grid w-full gap-1 px-4 py-3 text-left hover:bg-sand">
+                    <button type="button" onClick={() => setFormulario({ modo: "editar", marcacao: m })} className="grid w-full gap-1 px-4 py-3 text-left hover:bg-mist">
                       <div className="flex items-baseline justify-between gap-3">
                         <span className="font-semibold text-ink">
                           <span className="mr-2 tabular-nums text-slate-500">{hora(m.hora)}</span>
@@ -189,7 +189,7 @@ function Cabecalho({ mes, mudarMes, aoMarcar }: { mes: string; mudarMes: (m: str
 
 function Kpi({ titulo, valor, detalhe, destaque }: { titulo: string; valor: string; detalhe: React.ReactNode; destaque?: boolean }) {
   return (
-    <div className={`painel p-4 ${destaque ? "border-accent/40 bg-emerald-50/60" : ""}`}>
+    <div className={`painel p-4 ${destaque ? "border-sky/50 bg-mist" : ""}`}>
       <p className={`text-[11px] font-bold uppercase tracking-wider ${destaque ? "text-accent" : "text-slate-500"}`}>{titulo}</p>
       <p className={`mt-1 text-2xl font-semibold tabular-nums ${destaque ? "text-accent" : "text-ink"}`}>{valor}</p>
       <p className="mt-1 text-xs text-slate-600">{detalhe}</p>

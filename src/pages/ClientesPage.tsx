@@ -148,7 +148,7 @@ export function ClientesPage() {
           <ul className="divide-y divide-line">
             {visiveis.map((c) => (
               <li key={c.id}>
-                <button type="button" onClick={() => setFormulario({ modo: "editar", cliente: c })} className="grid w-full gap-0.5 px-4 py-3 text-left hover:bg-sand sm:grid-cols-[1fr_auto] sm:items-center">
+                <button type="button" onClick={() => setFormulario({ modo: "editar", cliente: c })} className="grid w-full gap-0.5 px-4 py-3 text-left hover:bg-mist sm:grid-cols-[1fr_auto] sm:items-center">
                   <div>
                     <p className="font-semibold text-ink">
                       {c.nome}

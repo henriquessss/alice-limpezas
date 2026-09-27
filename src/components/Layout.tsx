@@ -32,10 +32,12 @@ export function Layout({ children }: { children: ReactNode }) {
               event.preventDefault();
               navegar("/");
             }}
-            className="flex items-center gap-2 text-ink"
+            className="flex items-center gap-2.5 text-ink"
           >
-            <span className="grid h-8 w-8 place-items-center rounded-lg bg-accent text-sm font-bold text-white">AL</span>
-            <span className="font-semibold">Alice Limpezas</span>
+            <img src="/monograma.png" alt="" className="h-9 w-9 object-contain" />
+            <span className="font-display text-lg leading-none tracking-tight">
+              Alice <span className="text-[10px] font-sans font-semibold uppercase tracking-[0.25em] text-accent">Limpezas</span>
+            </span>
           </a>
           <nav className="flex gap-1 text-sm">
             {LIGACOES.map((l) => {
@@ -48,7 +50,7 @@ export function Layout({ children }: { children: ReactNode }) {
                     event.preventDefault();
                     navegar(ligacaoCom(l.path, mes));
                   }}
-                  className={`rounded-full px-3 py-1.5 font-medium ${ativa ? "bg-ink text-white" : "text-slate-600 hover:bg-sand"}`}
+                  className={`rounded-full px-3 py-1.5 font-medium ${ativa ? "bg-ink text-white" : "text-slate-600 hover:bg-mist hover:text-ink"}`}
                 >
                   {l.rotulo}
                 </a>

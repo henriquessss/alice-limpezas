@@ -73,7 +73,7 @@ export const TIPOS_DESPESA = [
 export type TipoDespesa = (typeof TIPOS_DESPESA)[number];
 
 export const CORES_DESPESA: Record<TipoDespesa, string> = {
-  "Produtos de limpeza": "#0f8a6a",
+  "Produtos de limpeza": "#1e6fae",
   Consumíveis: "#2f6fdb",
   Equipamento: "#7c5cd6",
   Deslocações: "#d98a1f",
