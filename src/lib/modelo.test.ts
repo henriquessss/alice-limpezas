@@ -96,9 +96,9 @@ describe("resumoDoMes", () => {
 
 describe("resumoPorFuncionaria", () => {
   const funcionarias: Funcionaria[] = [
-    { id: "f1", nome: "Ana", telefone: null, ativa: true },
-    { id: "f2", nome: "Marta", telefone: null, ativa: false },
-    { id: "f3", nome: "Cátia", telefone: null, ativa: false },
+    { id: "f1", nome: "Ana", telefone: null, email: null, ativa: true },
+    { id: "f2", nome: "Marta", telefone: null, email: null, ativa: false },
+    { id: "f3", nome: "Cátia", telefone: null, email: null, ativa: false },
   ];
   const marcacoes = [
     marcacao({ id: "m1", funcionaria_id: "f1", valor_funcionaria: 30, funcionaria_paga: true }),

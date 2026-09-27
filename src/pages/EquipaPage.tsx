@@ -51,7 +51,7 @@ export function EquipaPage() {
                       {f.nome}
                       {!f.ativa && <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">inativa</span>}
                     </span>
-                    <span className="block text-sm text-slate-500">{f.telefone ?? "—"}</span>
+                    <span className="block truncate text-sm text-slate-500">{[f.email, f.telefone].filter(Boolean).join(" · ") || "—"}</span>
                   </span>
                 </button>
               </li>
@@ -83,14 +83,16 @@ function iniciais(nome: string): string {
 function FormFuncionaria({ funcionaria, aoFechar, aoGuardar }: { funcionaria?: Funcionaria; aoFechar: () => void; aoGuardar: () => Promise<void> }) {
   const [nome, setNome] = useState(funcionaria?.nome ?? "");
   const [telefone, setTelefone] = useState(funcionaria?.telefone ?? "");
+  const [email, setEmail] = useState(funcionaria?.email ?? "");
   const [ativa, setAtiva] = useState(funcionaria?.ativa ?? true);
   const [aGuardar, setAGuardar] = useState(false);
   const [erro, setErro] = useState<string>();
 
   const submeter = async (event: FormEvent) => {
     event.preventDefault();
-    const valores = { nome: nome.trim(), telefone: telefone.trim() || null, ativa };
+    const valores = { nome: nome.trim(), telefone: telefone.trim() || null, email: email.trim() || null, ativa };
     if (!valores.nome) return setErro("Indique o nome.");
+    if (valores.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(valores.email)) return setErro("Email inválido.");
     setAGuardar(true);
     setErro(undefined);
     try {
@@ -112,8 +114,13 @@ function FormFuncionaria({ funcionaria, aoFechar, aoGuardar }: { funcionaria?: F
           <input required value={nome} onChange={(e) => setNome(e.target.value)} className="campo" />
         </label>
         <label>
+          <span className="rotulo">Email</span>
+          <input type="email" inputMode="email" autoComplete="off" value={email} onChange={(e) => setEmail(e.target.value)} className="campo" />
+          <span className="mt-1 block text-xs text-slate-500">É por aqui que a gestora comunica com a equipa.</span>
+        </label>
+        <label>
           <span className="rotulo">Telefone</span>
-          <input value={telefone} onChange={(e) => setTelefone(e.target.value)} className="campo" />
+          <input type="tel" inputMode="tel" value={telefone} onChange={(e) => setTelefone(e.target.value)} className="campo" />
         </label>
         {funcionaria && (
           <label className="flex items-center gap-2 text-sm">

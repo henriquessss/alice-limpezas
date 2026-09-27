@@ -6,25 +6,34 @@ export function Dialogo({ titulo, aoFechar, children }: { titulo: string; aoFech
       if (event.key === "Escape") aoFechar();
     };
     window.addEventListener("keydown", teclado);
-    return () => window.removeEventListener("keydown", teclado);
+    // A página por trás não pode deslizar enquanto a folha está aberta — no
+    // iOS o scroll passava para o fundo e a folha parecia solta.
+    const overflowAnterior = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", teclado);
+      document.body.style.overflow = overflowAnterior;
+    };
   }, [aoFechar]);
 
   return (
-    <div className="fixed inset-0 z-40 flex items-end justify-center bg-ink/40 p-0 sm:items-center sm:p-6" onClick={aoFechar}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center overflow-hidden bg-ink/40 sm:items-center sm:p-6" onClick={aoFechar}>
       <div
         role="dialog"
         aria-modal="true"
         aria-label={titulo}
-        className="max-h-[92dvh] w-full overflow-y-auto rounded-t-2xl bg-white p-5 shadow-panel sm:max-w-lg sm:rounded-2xl sm:p-6"
+        className="flex max-h-[calc(100dvh-2rem)] w-full max-w-full flex-col overflow-hidden rounded-t-2xl bg-white shadow-panel sm:max-h-[90dvh] sm:max-w-lg sm:rounded-2xl"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="mb-5 flex items-start justify-between gap-4">
+        <div className="flex shrink-0 items-center justify-between gap-4 border-b border-line px-5 py-3.5 sm:px-6">
           <h2 className="text-lg font-semibold text-ink">{titulo}</h2>
-          <button type="button" onClick={aoFechar} aria-label="Fechar" className="rounded-full px-2 text-xl leading-none text-slate-500 hover:text-ink">
+          <button type="button" onClick={aoFechar} aria-label="Fechar" className="-mr-2 grid h-10 w-10 place-items-center rounded-full text-2xl leading-none text-slate-500 hover:bg-mist hover:text-ink">
             ×
           </button>
         </div>
-        {children}
+        <div className="min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-5 sm:px-6">
+          {children}
+        </div>
       </div>
     </div>
   );

@@ -15,9 +15,9 @@ export function dadosDeExemplo(): Base {
   const dia = (n: number) => `${mes}-${String(n).padStart(2, "0")}`;
 
   const funcionarias: Funcionaria[] = [
-    { id: "f-ana", nome: "Ana Rocha", telefone: "912 000 001", ativa: true },
-    { id: "f-marta", nome: "Marta Silva", telefone: "912 000 002", ativa: true },
-    { id: "f-catia", nome: "Cátia Nunes", telefone: "912 000 003", ativa: true },
+    { id: "f-ana", nome: "Ana Rocha", telefone: "912 000 001", email: "ana@exemplo.pt", ativa: true },
+    { id: "f-marta", nome: "Marta Silva", telefone: "912 000 002", email: "marta@exemplo.pt", ativa: true },
+    { id: "f-catia", nome: "Cátia Nunes", telefone: "912 000 003", email: "catia@exemplo.pt", ativa: true },
   ];
 
   const cliente = (id: string, nome: string, morada: string): Cliente => ({

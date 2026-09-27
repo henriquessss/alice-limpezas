@@ -27,6 +27,7 @@ export interface Funcionaria {
   id: string;
   nome: string;
   telefone: string | null;
+  email: string | null;
   ativa: boolean;
 }
 

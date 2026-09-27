@@ -24,8 +24,18 @@ h1, h2.titulo { font-family: Georgia, Cambria, "Times New Roman", serif; font-we
 :focus-visible { outline: 2px solid #1e6fae; outline-offset: 2px; }
 
 .campo {
-  @apply h-11 w-full rounded-lg border border-line bg-white px-3 text-ink;
+  @apply h-11 w-full min-w-0 max-w-full rounded-lg border border-line bg-white px-3 text-ink;
 }
+/* Os campos de data/hora do Safari iOS têm largura própria e furavam a
+   grelha de duas colunas, empurrando a folha para fora do ecrã. */
+input[type="date"], input[type="time"], input[type="number"], select {
+  -webkit-appearance: none;
+  appearance: none;
+  min-width: 0;
+}
+input[type="date"], input[type="time"] { display: block; }
+select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 0.75rem center; padding-right: 2rem; }
+label, .campo, form > * { min-width: 0; }
 .rotulo {
   @apply mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-600;
 }
