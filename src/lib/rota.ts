@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-const EVENTO = "casa-pronta:rota";
+const EVENTO = "alice-limpezas:rota";
 
 function lerRota() {
   return window.location.pathname + window.location.search;

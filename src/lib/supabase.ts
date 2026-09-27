@@ -11,7 +11,7 @@ export const supabase = isSupabaseConfigured
         persistSession: true,
         autoRefreshToken: true,
         detectSessionInUrl: true,
-        storageKey: "casa-pronta:auth",
+        storageKey: "alice-limpezas:auth",
       },
     })
   : null;

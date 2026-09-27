@@ -34,8 +34,8 @@ export function Layout({ children }: { children: ReactNode }) {
             }}
             className="flex items-center gap-2 text-ink"
           >
-            <span className="grid h-8 w-8 place-items-center rounded-lg bg-accent text-sm font-bold text-white">CP</span>
-            <span className="font-semibold">Casa Pronta</span>
+            <span className="grid h-8 w-8 place-items-center rounded-lg bg-accent text-sm font-bold text-white">AL</span>
+            <span className="font-semibold">Alice Limpezas</span>
           </a>
           <nav className="flex gap-1 text-sm">
             {LIGACOES.map((l) => {

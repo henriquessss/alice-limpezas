@@ -24,8 +24,8 @@ export function LoginPage() {
     <main className="flex min-h-dvh items-center justify-center bg-sand px-5 py-12">
       <section className="painel w-full max-w-sm p-6 sm:p-8">
         <div className="mb-6 flex items-center gap-2">
-          <span className="grid h-9 w-9 place-items-center rounded-lg bg-accent text-sm font-bold text-white">CP</span>
-          <span className="text-lg font-semibold text-ink">Casa Pronta</span>
+          <span className="grid h-9 w-9 place-items-center rounded-lg bg-accent text-sm font-bold text-white">AL</span>
+          <span className="text-lg font-semibold text-ink">Alice Limpezas</span>
         </div>
         <p className="text-sm text-slate-600">Inicie sessão para ver as marcações e as contas.</p>
 

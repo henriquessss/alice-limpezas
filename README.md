@@ -1,4 +1,4 @@
-# Casa Pronta
+# Alice Limpezas
 
 Painel de gestão para uma empresa de limpezas: marcações no calendário, receitas por cliente, pagamentos à equipa e despesas do mês.
 
@@ -47,6 +47,6 @@ Vercel, framework Vite. Variáveis `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY
 
 ## Por fazer
 
-- Integração com o backoffice da Paradise Villas (pedidos de limpeza por check-out → marcação aqui). Desenho: endpoint/webhook do lado da Casa Pronta, cliente com `origem = 'paradise-villas'`.
+- Integração com o backoffice da Paradise Villas (pedidos de limpeza por check-out → marcação aqui). Desenho: endpoint/webhook do lado da Alice Limpezas, cliente com `origem = 'paradise-villas'`.
 - Notificações às funcionárias (email/WhatsApp) com o plano do dia.
 - Relatório mensal em PDF para o contabilista.

@@ -44,7 +44,7 @@ function repositorioSupabase(): Repositorio {
   };
 }
 
-const CHAVE_LOCAL = "casa-pronta:dados";
+const CHAVE_LOCAL = "alice-limpezas:dados";
 
 type Linha = Record<string, unknown> & { id: string };
 type Base = Record<Tabela, Linha[]>;

@@ -1,4 +1,4 @@
--- Schema inicial da Casa Pronta: marcações de limpeza, equipa, clientes e despesas.
+-- Schema inicial da Alice Limpezas: marcações de limpeza, equipa, clientes e despesas.
 --
 -- Só há um tipo de utilizador (a gestora) e entra por Supabase Auth; todas as
 -- tabelas ficam acessíveis a `authenticated` e fechadas a `anon`.
