@@ -20,11 +20,9 @@ Estado a 2026-09-27. Atualizar ao fechar cada ponto.
 6. **Smoke test ponta a ponta:** criar reserva de teste no PV com empresa Alice → confirmar marcação no painel da Alice no dia do check-out, com extras nos detalhes → apagar a reserva no PV → confirmar que a marcação desaparece (ou fica anotada, se já tiver pagamento).
 7. **Testar em browser** o que foi construído sem browser nesta sessão: bloco «Limpeza» na página da reserva do PV, select de empresa ao criar reserva, secção Empresas de limpeza nas Definições; na Alice, locais no cliente e filtro por villa nas contas.
 
-## Alice — por aplicar antes do próximo deploy
+## Feito na fase de avisos à equipa (2026-09-27/28)
 
-- Migração `202609280003_email_funcionaria.sql` (`alter table funcionarias add column email`). Os commits `d9a79d2` e seguintes ficam sem push até isto estar aplicado — gravar uma funcionária falharia.
-
-## Feito na fase de avisos à equipa (2026-09-27)
+- Migração `202609280003_email_funcionaria.sql` aplicada; `33fcce8` em produção.
 
 - Email por funcionária no perfil.
 - Avisos por `mailto:` (0 €, saem da conta da gestora): botão «Avisar … por email» ao editar uma marcação com funcionária; «Enviar plano do dia» no painel, um botão por funcionária com marcações nesse dia. Textos em `src/lib/emailEquipa.ts`.
