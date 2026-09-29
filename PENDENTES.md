@@ -15,8 +15,9 @@ Estado a 2026-09-29. Atualizar ao fechar cada ponto.
 
 ## Por fazer (agora desbloqueado — no browser do PV)
 
+0. **Aplicar no Supabase do PV** `clients/paradise-villas/supabase/migrations/202609290003_hora_limpeza_por_reserva.sql` (coluna `reservas.hora_limpeza`; `f482508` já está em produção e lê-a — sem a migração, criar reserva e o cron falham com «column hora_limpeza does not exist»).
 3. **Definições do PV → Empresas de limpeza:**
-   - Alice Limpezas — canal «plataforma», endereço `https://nspellvudlwpkwfbgvrg.supabase.co/functions/v1/pedido-limpeza`, hora da limpeza (ex. 10:00).
+   - Alice Limpezas — canal «plataforma», endereço `https://nspellvudlwpkwfbgvrg.supabase.co/functions/v1/pedido-limpeza`, hora predefinida (ex. 10:00; cada reserva pode ter a sua).
    - Outra empresa — canal «email», email dela.
 4. **Villas do PV:** escolher a empresa predefinida em cada villa.
 5. **Alice → Clientes → Paradise Villas → Locais:** o cliente e cada villa aparecem sozinhos no primeiro pedido; preencher o preço acordado e, se diferente de 55 %, o valor da funcionária por villa.
