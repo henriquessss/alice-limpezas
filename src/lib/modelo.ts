@@ -18,7 +18,8 @@ export interface Local {
   nome: string;
   morada: string | null;
   preco_acordado: number | null;
-  valor_funcionaria: number | null;
+  /** O que a gestora recebe por limpeza neste local; preenche a marcação. */
+  valor_gestora: number | null;
   ativo: boolean;
   referencia_externa: string | null;
 }
@@ -28,6 +29,8 @@ export interface Funcionaria {
   nome: string;
   telefone: string | null;
   email: string | null;
+  /** Valor por hora; preenche a taxa ao juntá-la a uma limpeza. */
+  taxa_hora: number;
   ativa: boolean;
 }
 
@@ -43,17 +46,42 @@ export interface Marcacao {
   id: string;
   cliente_id: string;
   local_id: string | null;
-  funcionaria_id: string | null;
   data: string;
   hora: string | null;
   valor_cobrado: number;
-  valor_funcionaria: number;
+  /** O que a gestora recebe por este serviço. Valor definido por ela, nunca percentagem. */
+  valor_gestora: number;
   cliente_pagou: boolean;
-  funcionaria_paga: boolean;
   notas: string | null;
   origem: string;
   referencia_externa: string | null;
   detalhes: DetalhesPedido | null;
+}
+
+/**
+ * Uma funcionária numa limpeza. As funcionárias são pagas à hora: as horas
+ * podem ficar por preencher até depois do serviço; o valor é horas × taxa, mas
+ * a gestora pode escrevê-lo à mão.
+ */
+export interface Participacao {
+  id: string;
+  marcacao_id: string;
+  funcionaria_id: string;
+  horas: number | null;
+  taxa_hora: number;
+  valor: number;
+  paga: boolean;
+}
+
+export function valorDaParticipacao(horas: number | null, taxaHora: number): number {
+  if (horas === null) return 0;
+  return Math.round(horas * taxaHora * 100) / 100;
+}
+
+export function participacoesPorMarcacao(participacoes: Participacao[]): Map<string, Participacao[]> {
+  const mapa = new Map<string, Participacao[]>();
+  for (const p of participacoes) mapa.set(p.marcacao_id, [...(mapa.get(p.marcacao_id) ?? []), p]);
+  return mapa;
 }
 
 export function nomeDaMarcacao(m: Pick<Marcacao, "cliente_id" | "local_id">, clientes: Map<string, string>, locais: Map<string, string>): string {
@@ -99,15 +127,9 @@ export const ROTULO_ESTADO: Record<EstadoMarcacao, string> = {
   em_atraso: "Em atraso",
 };
 
-export const PERCENTAGEM_FUNCIONARIA_SUGERIDA = 0.55;
-
 export function estadoDaMarcacao(m: Pick<Marcacao, "data" | "cliente_pagou">, hoje: string): EstadoMarcacao {
   if (m.cliente_pagou) return "recebido";
   return m.data < hoje ? "em_atraso" : "pendente";
-}
-
-export function valorSugeridoFuncionaria(valorCobrado: number): number {
-  return Math.round(valorCobrado * PERCENTAGEM_FUNCIONARIA_SUGERIDA * 100) / 100;
 }
 
 export interface ResumoMes {
@@ -116,27 +138,37 @@ export interface ResumoMes {
   recebido: number;
   porReceber: number;
   emAtraso: number;
+  /** Soma do que as funcionárias recebem (participações). */
   custoEquipa: number;
   despesas: number;
+  /** Equipa + despesas. */
   custos: number;
+  /** Receita − custos: o que fica para a gestora antes de ela fixar o seu valor. */
   lucro: number;
-  margem: number;
+  /** Soma de `valor_gestora`: o que a gestora definiu receber. */
+  gestora: number;
+  /** Lucro − gestora: o que sobra na empresa depois de todos pagos, incluindo ela. */
+  sobra: number;
   porPagarEquipa: number;
 }
 
-export function resumoDoMes(marcacoes: Marcacao[], despesas: Despesa[], hoje: string): ResumoMes {
+export function resumoDoMes(marcacoes: Marcacao[], participacoes: Participacao[], despesas: Despesa[], hoje: string): ResumoMes {
   let receita = 0;
   let recebido = 0;
   let emAtraso = 0;
-  let custoEquipa = 0;
-  let porPagarEquipa = 0;
+  let gestora = 0;
   for (const m of marcacoes) {
     receita += m.valor_cobrado;
-    custoEquipa += m.valor_funcionaria;
+    gestora += m.valor_gestora;
     const estado = estadoDaMarcacao(m, hoje);
     if (estado === "recebido") recebido += m.valor_cobrado;
     if (estado === "em_atraso") emAtraso += m.valor_cobrado;
-    if (!m.funcionaria_paga) porPagarEquipa += m.valor_funcionaria;
+  }
+  let custoEquipa = 0;
+  let porPagarEquipa = 0;
+  for (const p of participacoes) {
+    custoEquipa += p.valor;
+    if (!p.paga) porPagarEquipa += p.valor;
   }
   const totalDespesas = despesas.reduce((soma, d) => soma + d.valor, 0);
   const custos = custoEquipa + totalDespesas;
@@ -151,7 +183,8 @@ export function resumoDoMes(marcacoes: Marcacao[], despesas: Despesa[], hoje: st
     despesas: totalDespesas,
     custos,
     lucro,
-    margem: receita > 0 ? lucro / receita : 0,
+    gestora,
+    sobra: lucro - gestora,
     porPagarEquipa,
   };
 }
@@ -159,22 +192,27 @@ export function resumoDoMes(marcacoes: Marcacao[], despesas: Despesa[], hoje: st
 export interface ResumoFuncionaria {
   funcionaria: Funcionaria;
   servicos: number;
+  horas: number;
+  /** Participações ainda sem horas nem valor — por definir depois do serviço. */
+  semValor: number;
   aReceber: number;
   porPagar: number;
-  marcacoesPorPagar: string[];
+  participacoesPorPagar: string[];
 }
 
-export function resumoPorFuncionaria(funcionarias: Funcionaria[], marcacoes: Marcacao[]): ResumoFuncionaria[] {
+export function resumoPorFuncionaria(funcionarias: Funcionaria[], participacoes: Participacao[]): ResumoFuncionaria[] {
   return funcionarias
     .map((funcionaria) => {
-      const suas = marcacoes.filter((m) => m.funcionaria_id === funcionaria.id);
-      const porPagar = suas.filter((m) => !m.funcionaria_paga);
+      const suas = participacoes.filter((p) => p.funcionaria_id === funcionaria.id);
+      const porPagar = suas.filter((p) => !p.paga);
       return {
         funcionaria,
         servicos: suas.length,
-        aReceber: suas.reduce((soma, m) => soma + m.valor_funcionaria, 0),
-        porPagar: porPagar.reduce((soma, m) => soma + m.valor_funcionaria, 0),
-        marcacoesPorPagar: porPagar.map((m) => m.id),
+        horas: suas.reduce((soma, p) => soma + (p.horas ?? 0), 0),
+        semValor: suas.filter((p) => p.horas === null && p.valor === 0).length,
+        aReceber: suas.reduce((soma, p) => soma + p.valor, 0),
+        porPagar: porPagar.reduce((soma, p) => soma + p.valor, 0),
+        participacoesPorPagar: porPagar.map((p) => p.id),
       };
     })
     .filter((r) => r.servicos > 0 || r.funcionaria.ativa);

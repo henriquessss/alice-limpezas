@@ -50,3 +50,8 @@ export function diaLongo(iso: string): string {
 export function percentagem(valor: number): string {
   return `${Math.round(valor * 100)}%`;
 }
+
+/** 2.5 → "2,5 h"; 0 → "0 h" */
+export function horasTexto(horas: number): string {
+  return `${new Intl.NumberFormat("pt-PT", { maximumFractionDigits: 2 }).format(horas)} h`;
+}

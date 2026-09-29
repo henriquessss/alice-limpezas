@@ -19,7 +19,7 @@ function numeroOuNulo(texto: string): number | null {
  */
 function LocaisDoCliente({ clienteId }: { clienteId: string }) {
   const [locais, setLocais] = useState<Local[]>();
-  const [novo, setNovo] = useState({ nome: "", morada: "", preco: "", funcionaria: "" });
+  const [novo, setNovo] = useState({ nome: "", morada: "", preco: "", gestora: "" });
   const [erro, setErro] = useState<string>();
 
   const carregar = async () => {
@@ -52,14 +52,14 @@ function LocaisDoCliente({ clienteId }: { clienteId: string }) {
         nome: novo.nome.trim(),
         morada: novo.morada.trim() || null,
         preco_acordado: numeroOuNulo(novo.preco),
-        valor_funcionaria: numeroOuNulo(novo.funcionaria),
+        valor_gestora: numeroOuNulo(novo.gestora),
         ativo: true,
       });
-      setNovo({ nome: "", morada: "", preco: "", funcionaria: "" });
+      setNovo({ nome: "", morada: "", preco: "", gestora: "" });
     });
   };
 
-  const guardarCampo = (local: Local, campo: "nome" | "morada" | "preco_acordado" | "valor_funcionaria", texto: string) => {
+  const guardarCampo = (local: Local, campo: "nome" | "morada" | "preco_acordado" | "valor_gestora", texto: string) => {
     const valor = campo === "nome" ? texto.trim() : campo === "morada" ? texto.trim() || null : numeroOuNulo(texto);
     if (campo === "nome" && !valor) return;
     if (local[campo] === valor) return;
@@ -78,7 +78,7 @@ function LocaisDoCliente({ clienteId }: { clienteId: string }) {
   return (
     <fieldset className="rounded-lg border border-line p-3">
       <legend className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-600">Locais e preços acordados</legend>
-      <p className="text-xs text-slate-500">Para clientes com várias casas. O preço preenche o valor da marcação; vazio = 55% para a funcionária.</p>
+      <p className="text-xs text-slate-500">Para clientes com várias casas. O preço e o valor da gestora preenchem a marcação; as funcionárias são pagas à hora.</p>
       {erro && <div role="alert" className="mt-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-800">{erro}</div>}
       <div className="mt-3 grid gap-2">
         {locais?.map((l) => (
@@ -86,7 +86,7 @@ function LocaisDoCliente({ clienteId }: { clienteId: string }) {
             <input defaultValue={l.nome} onBlur={(e) => guardarCampo(l, "nome", e.target.value)} aria-label="Nome do local" className={`${entrada} ${largo}`} />
             <input defaultValue={l.morada ?? ""} onBlur={(e) => guardarCampo(l, "morada", e.target.value)} aria-label="Morada" placeholder="Morada" className={`${entrada} ${largo}`} />
             <input defaultValue={l.preco_acordado ?? ""} onBlur={(e) => guardarCampo(l, "preco_acordado", e.target.value)} aria-label="Preço acordado" placeholder="€" inputMode="decimal" className={`${entrada} text-right`} />
-            <input defaultValue={l.valor_funcionaria ?? ""} onBlur={(e) => guardarCampo(l, "valor_funcionaria", e.target.value)} aria-label="Valor à funcionária" placeholder="func." inputMode="decimal" className={`${entrada} text-right`} />
+            <input defaultValue={l.valor_gestora ?? ""} onBlur={(e) => guardarCampo(l, "valor_gestora", e.target.value)} aria-label="Valor da gestora" placeholder="gestora" inputMode="decimal" className={`${entrada} text-right`} />
             <button type="button" onClick={() => remover(l)} aria-label={`Apagar ${l.nome}`} className="col-span-2 h-10 justify-self-end px-2 text-xs font-semibold text-slate-500 hover:text-rose-700 sm:col-span-1 sm:text-base">
               <span className="sm:hidden">Apagar</span><span className="hidden sm:inline">×</span>
             </button>
@@ -96,7 +96,7 @@ function LocaisDoCliente({ clienteId }: { clienteId: string }) {
           <input value={novo.nome} onChange={(e) => setNovo({ ...novo, nome: e.target.value })} placeholder="Novo local" aria-label="Nome do novo local" className={`${entrada} ${largo}`} />
           <input value={novo.morada} onChange={(e) => setNovo({ ...novo, morada: e.target.value })} placeholder="Morada" aria-label="Morada do novo local" className={`${entrada} ${largo}`} />
           <input value={novo.preco} onChange={(e) => setNovo({ ...novo, preco: e.target.value })} placeholder="€" aria-label="Preço acordado do novo local" inputMode="decimal" className={`${entrada} text-right`} />
-          <input value={novo.funcionaria} onChange={(e) => setNovo({ ...novo, funcionaria: e.target.value })} placeholder="func." aria-label="Valor à funcionária do novo local" inputMode="decimal" className={`${entrada} text-right`} />
+          <input value={novo.gestora} onChange={(e) => setNovo({ ...novo, gestora: e.target.value })} placeholder="gestora" aria-label="Valor da gestora do novo local" inputMode="decimal" className={`${entrada} text-right`} />
           <button type="button" onClick={adicionar} className="botao-secundario col-span-2 h-10 px-3 text-xs sm:col-span-1">+ Adicionar</button>
         </div>
       </div>

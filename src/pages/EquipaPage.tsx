@@ -53,6 +53,7 @@ export function EquipaPage() {
                     </span>
                     <span className="block truncate text-sm text-slate-500">{[f.email, f.telefone].filter(Boolean).join(" · ") || "—"}</span>
                   </span>
+                  <span className="shrink-0 text-sm tabular-nums text-slate-600">{f.taxa_hora > 0 ? `${f.taxa_hora.toFixed(2)} €/h` : <em className="text-amber-700">sem €/h</em>}</span>
                 </button>
               </li>
             ))}
@@ -84,14 +85,17 @@ function FormFuncionaria({ funcionaria, aoFechar, aoGuardar }: { funcionaria?: F
   const [nome, setNome] = useState(funcionaria?.nome ?? "");
   const [telefone, setTelefone] = useState(funcionaria?.telefone ?? "");
   const [email, setEmail] = useState(funcionaria?.email ?? "");
+  const [taxaHora, setTaxaHora] = useState(funcionaria ? String(funcionaria.taxa_hora) : "");
   const [ativa, setAtiva] = useState(funcionaria?.ativa ?? true);
   const [aGuardar, setAGuardar] = useState(false);
   const [erro, setErro] = useState<string>();
 
   const submeter = async (event: FormEvent) => {
     event.preventDefault();
-    const valores = { nome: nome.trim(), telefone: telefone.trim() || null, email: email.trim() || null, ativa };
+    const taxa_hora = Number(taxaHora.replace(",", ".")) || 0;
+    const valores = { nome: nome.trim(), telefone: telefone.trim() || null, email: email.trim() || null, taxa_hora, ativa };
     if (!valores.nome) return setErro("Indique o nome.");
+    if (taxa_hora < 0) return setErro("O valor à hora não pode ser negativo.");
     if (valores.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(valores.email)) return setErro("Email inválido.");
     setAGuardar(true);
     setErro(undefined);
@@ -118,10 +122,17 @@ function FormFuncionaria({ funcionaria, aoFechar, aoGuardar }: { funcionaria?: F
           <input type="email" inputMode="email" autoComplete="off" value={email} onChange={(e) => setEmail(e.target.value)} className="campo" />
           <span className="mt-1 block text-xs text-slate-500">É por aqui que a gestora comunica com a equipa.</span>
         </label>
-        <label>
-          <span className="rotulo">Telefone</span>
-          <input type="tel" inputMode="tel" value={telefone} onChange={(e) => setTelefone(e.target.value)} className="campo" />
-        </label>
+        <div className="grid grid-cols-2 gap-3">
+          <label>
+            <span className="rotulo">Telefone</span>
+            <input type="tel" inputMode="tel" value={telefone} onChange={(e) => setTelefone(e.target.value)} className="campo" />
+          </label>
+          <label>
+            <span className="rotulo">Valor à hora (€)</span>
+            <input type="number" min="0" step="0.01" inputMode="decimal" value={taxaHora} onChange={(e) => setTaxaHora(e.target.value)} className="campo" />
+          </label>
+        </div>
+        <p className="-mt-2 text-xs text-slate-500">Ao juntá-la a uma limpeza, recebe horas × este valor. Pode corrigir-se caso a caso.</p>
         {funcionaria && (
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={ativa} onChange={(e) => setAtiva(e.target.checked)} className="h-5 w-5 accent-accent" />

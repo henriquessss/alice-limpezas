@@ -1,10 +1,10 @@
 import { useState, type FormEvent } from "react";
-import { operacoes, type NovaMarcacao } from "../lib/dados";
+import { operacoes, type NovaMarcacao, type NovaParticipacao } from "../lib/dados";
 import { somarDias } from "../lib/datas";
 import { mensagemDeErro } from "../lib/erros";
 import { emailDaMarcacao, mailto } from "../lib/emailEquipa";
-import { dataCurta } from "../lib/format";
-import { valorSugeridoFuncionaria, type Cliente, type Funcionaria, type Local, type Marcacao } from "../lib/modelo";
+import { dataCurta, moeda } from "../lib/format";
+import { valorDaParticipacao, type Cliente, type Funcionaria, type Local, type Marcacao, type Participacao } from "../lib/modelo";
 import { Dialogo } from "./Dialogo";
 
 interface Props {
@@ -13,43 +13,82 @@ interface Props {
   funcionarias: Funcionaria[];
   /** Sem `marcacao` cria; com `marcacao` edita. */
   marcacao?: Marcacao;
+  /** Equipa atual da marcação em edição. */
+  participacoes?: Participacao[];
   dataInicial?: string;
   aoFechar: () => void;
   aoGuardar: () => Promise<void>;
+}
+
+/** Uma funcionária no formulário; os números ficam em texto até gravar. */
+interface LinhaEquipa {
+  funcionaria_id: string;
+  horas: string;
+  taxa: string;
+  valor: string;
+  /** A gestora escreveu o valor à mão: as horas deixam de o recalcular. */
+  valorManual: boolean;
+  paga: boolean;
 }
 
 function texto(valor: number | null | undefined): string {
   return valor === null || valor === undefined ? "" : String(valor);
 }
 
-export function FormMarcacao({ clientes, locais, funcionarias, marcacao, dataInicial, aoFechar, aoGuardar }: Props) {
+function numero(valor: string): number {
+  return Number(valor.replace(",", ".")) || 0;
+}
+
+function numeroOuNulo(valor: string): number | null {
+  return valor.trim() === "" ? null : numero(valor);
+}
+
+function linhaDe(p: Participacao): LinhaEquipa {
+  return {
+    funcionaria_id: p.funcionaria_id,
+    horas: texto(p.horas),
+    taxa: texto(p.taxa_hora),
+    valor: texto(p.valor),
+    valorManual: p.valor !== valorDaParticipacao(p.horas, p.taxa_hora),
+    paga: p.paga,
+  };
+}
+
+function participacaoDe(l: LinhaEquipa): NovaParticipacao {
+  const horas = numeroOuNulo(l.horas);
+  const taxa_hora = numero(l.taxa);
+  return {
+    funcionaria_id: l.funcionaria_id,
+    horas,
+    taxa_hora,
+    valor: l.valorManual ? numero(l.valor) : valorDaParticipacao(horas, taxa_hora),
+    paga: l.paga,
+  };
+}
+
+export function FormMarcacao({ clientes, locais, funcionarias, marcacao, participacoes = [], dataInicial, aoFechar, aoGuardar }: Props) {
   const [clienteId, setClienteId] = useState(marcacao?.cliente_id ?? clientes[0]?.id ?? "");
   const [localId, setLocalId] = useState(marcacao?.local_id ?? "");
-  const [funcionariaId, setFuncionariaId] = useState(marcacao?.funcionaria_id ?? "");
   const [data, setData] = useState(marcacao?.data ?? dataInicial ?? "");
   const [hora, setHora] = useState(marcacao?.hora?.slice(0, 5) ?? "09:00");
   const [valorCobrado, setValorCobrado] = useState(texto(marcacao?.valor_cobrado));
-  const [valorFuncionaria, setValorFuncionaria] = useState(texto(marcacao?.valor_funcionaria));
-  const [valorFuncionariaManual, setValorFuncionariaManual] = useState(Boolean(marcacao));
+  const [valorGestora, setValorGestora] = useState(texto(marcacao?.valor_gestora));
+  const [equipa, setEquipa] = useState<LinhaEquipa[]>(participacoes.map(linhaDe));
   const [clientePagou, setClientePagou] = useState(marcacao?.cliente_pagou ?? false);
-  const [funcionariaPaga, setFuncionariaPaga] = useState(marcacao?.funcionaria_paga ?? false);
   const [notas, setNotas] = useState(marcacao?.notas ?? "");
   const [repetirAte, setRepetirAte] = useState("");
   const [aGuardar, setAGuardar] = useState(false);
   const [erro, setErro] = useState<string>();
 
   const locaisDoCliente = locais.filter((l) => l.cliente_id === clienteId && (l.ativo || l.id === localId));
-  const cobrado = Number(valorCobrado.replace(",", ".")) || 0;
-  const sugerido = valorSugeridoFuncionaria(cobrado);
   const integracao = marcacao && marcacao.origem !== "manual";
+  const nomeFuncionaria = new Map(funcionarias.map((f) => [f.id, f]));
+  const disponiveis = funcionarias.filter((f) => f.ativa && !equipa.some((l) => l.funcionaria_id === f.id));
 
-  const mudarValorCobrado = (valor: string) => {
-    setValorCobrado(valor);
-    if (!valorFuncionariaManual) {
-      const n = Number(valor.replace(",", ".")) || 0;
-      setValorFuncionaria(n > 0 ? String(valorSugeridoFuncionaria(n)) : "");
-    }
-  };
+  const cobrado = numero(valorCobrado);
+  const gestora = numero(valorGestora);
+  const totalEquipa = equipa.reduce((soma, l) => soma + participacaoDe(l).valor, 0);
+  const sobra = cobrado - totalEquipa - gestora;
 
   const mudarCliente = (id: string) => {
     setClienteId(id);
@@ -61,16 +100,29 @@ export function FormMarcacao({ clientes, locais, funcionarias, marcacao, dataIni
     setLocalId(id);
     const local = locais.find((l) => l.id === id);
     if (!local) return;
-    if (local.preco_acordado !== null) {
-      setValorCobrado(String(local.preco_acordado));
-      if (local.valor_funcionaria !== null) {
-        setValorFuncionaria(String(local.valor_funcionaria));
-        setValorFuncionariaManual(true);
-      } else if (!valorFuncionariaManual) {
-        setValorFuncionaria(String(valorSugeridoFuncionaria(local.preco_acordado)));
-      }
-    }
+    if (local.preco_acordado !== null) setValorCobrado(String(local.preco_acordado));
+    if (local.valor_gestora !== null) setValorGestora(String(local.valor_gestora));
   };
+
+  const juntar = (funcionariaId: string) => {
+    const f = nomeFuncionaria.get(funcionariaId);
+    if (!f) return;
+    setEquipa([...equipa, { funcionaria_id: f.id, horas: "", taxa: String(f.taxa_hora), valor: "", valorManual: false, paga: false }]);
+  };
+
+  const mudarLinha = (indice: number, mudanca: Partial<LinhaEquipa>) => {
+    setEquipa(equipa.map((l, i) => {
+      if (i !== indice) return l;
+      const nova = { ...l, ...mudanca };
+      if (!nova.valorManual) {
+        const calculado = valorDaParticipacao(numeroOuNulo(nova.horas), numero(nova.taxa));
+        nova.valor = calculado > 0 ? String(calculado) : "";
+      }
+      return nova;
+    }));
+  };
+
+  const tirar = (indice: number) => setEquipa(equipa.filter((_, i) => i !== indice));
 
   const submeter = async (event: FormEvent) => {
     event.preventDefault();
@@ -80,27 +132,25 @@ export function FormMarcacao({ clientes, locais, funcionarias, marcacao, dataIni
     const base: NovaMarcacao = {
       cliente_id: clienteId,
       local_id: localId || null,
-      funcionaria_id: funcionariaId || null,
       data,
       hora: hora || null,
       valor_cobrado: cobrado,
-      valor_funcionaria: Number(valorFuncionaria.replace(",", ".")) || 0,
+      valor_gestora: gestora,
       cliente_pagou: clientePagou,
-      funcionaria_paga: funcionariaPaga,
       notas: notas.trim() || null,
     };
+    const novaEquipa = equipa.map(participacaoDe);
     setAGuardar(true);
     try {
       if (marcacao) {
         await operacoes.atualizarMarcacao(marcacao.id, base);
+        await operacoes.guardarEquipa(marcacao.id, participacoes, novaEquipa);
       } else {
         const linhas: NovaMarcacao[] = [base];
         if (repetirAte && repetirAte > data) {
-          for (let d = somarDias(data, 7); d <= repetirAte; d = somarDias(d, 7)) {
-            linhas.push({ ...base, data: d, cliente_pagou: false, funcionaria_paga: false });
-          }
+          for (let d = somarDias(data, 7); d <= repetirAte; d = somarDias(d, 7)) linhas.push({ ...base, data: d, cliente_pagou: false });
         }
-        await operacoes.criarMarcacoes(linhas);
+        await operacoes.criarMarcacoes(linhas, novaEquipa.map((p) => ({ ...p, paga: false })));
       }
       await aoGuardar();
       aoFechar();
@@ -124,14 +174,9 @@ export function FormMarcacao({ clientes, locais, funcionarias, marcacao, dataIni
   };
 
   const detalhes = marcacao?.detalhes;
-  const funcionariaEscolhida = funcionarias.find((f) => f.id === funcionariaId);
-  const emailAviso = marcacao && funcionariaEscolhida?.email
-    ? emailDaMarcacao(
-        { ...marcacao, funcionaria_id: funcionariaEscolhida.id },
-        funcionariaEscolhida,
-        { clientes: new Map(clientes.map((c) => [c.id, c])), locais: new Map(locais.map((l) => [l.id, l])) },
-      )
-    : undefined;
+  const nomes = { clientes: new Map(clientes.map((c) => [c.id, c])), locais: new Map(locais.map((l) => [l.id, l])) };
+  const equipaGuardada = participacoes.map((p) => nomeFuncionaria.get(p.funcionaria_id)).filter((f): f is Funcionaria => Boolean(f));
+  const semEmail = equipaGuardada.filter((f) => !f.email);
 
   return (
     <Dialogo titulo={marcacao ? "Editar marcação" : "Nova marcação"} aoFechar={aoFechar}>
@@ -184,47 +229,73 @@ export function FormMarcacao({ clientes, locais, funcionarias, marcacao, dataIni
             <input type="time" value={hora} onChange={(e) => setHora(e.target.value)} className="campo" />
           </label>
         </div>
-        <label>
-          <span className="rotulo">Funcionária</span>
-          <select value={funcionariaId} onChange={(e) => setFuncionariaId(e.target.value)} className="campo">
-            <option value="">Por atribuir</option>
-            {funcionarias.filter((f) => f.ativa || f.id === funcionariaId).map((f) => (
-              <option key={f.id} value={f.id}>{f.nome}</option>
-            ))}
-          </select>
-        </label>
         <div className="grid grid-cols-2 gap-3">
           <label>
             <span className="rotulo">Valor cobrado (€)</span>
-            <input required type="number" min="0" step="0.01" inputMode="decimal" value={valorCobrado} onChange={(e) => mudarValorCobrado(e.target.value)} className="campo" />
+            <input required type="number" min="0" step="0.01" inputMode="decimal" value={valorCobrado} onChange={(e) => setValorCobrado(e.target.value)} className="campo" />
           </label>
           <label>
-            <span className="rotulo">A pagar à funcionária (€)</span>
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              inputMode="decimal"
-              value={valorFuncionaria}
-              onChange={(e) => {
-                setValorFuncionariaManual(true);
-                setValorFuncionaria(e.target.value);
-              }}
-              className="campo"
-            />
-            <span className="mt-1 block text-xs text-slate-500">Sugerido: 55% do valor{cobrado > 0 ? ` = ${sugerido.toFixed(2)} €` : ""}</span>
+            <span className="rotulo">Gestora recebe (€)</span>
+            <input type="number" min="0" step="0.01" inputMode="decimal" value={valorGestora} onChange={(e) => setValorGestora(e.target.value)} className="campo" />
           </label>
         </div>
-        <div className="grid grid-cols-2 gap-3 text-sm">
-          <label className="flex items-center gap-2">
-            <input type="checkbox" checked={clientePagou} onChange={(e) => setClientePagou(e.target.checked)} className="h-5 w-5 accent-accent" />
-            Cliente pagou
-          </label>
-          <label className="flex items-center gap-2">
-            <input type="checkbox" checked={funcionariaPaga} onChange={(e) => setFuncionariaPaga(e.target.checked)} className="h-5 w-5 accent-accent" />
-            Funcionária paga
-          </label>
-        </div>
+
+        {/* ---------------- Equipa ---------------- */}
+        <fieldset className="rounded-lg border border-line p-3">
+          <legend className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-600">Equipa</legend>
+          {equipa.length === 0 && <p className="text-xs text-slate-500">Ninguém atribuído. As horas podem ficar em branco e preencher-se depois da limpeza.</p>}
+          <div className="grid gap-2">
+            {equipa.map((l, i) => {
+              const f = nomeFuncionaria.get(l.funcionaria_id);
+              return (
+                <div key={l.funcionaria_id} className="rounded-lg border border-line bg-sand/60 p-2">
+                  <div className="flex items-center gap-2">
+                    <span className="min-w-0 flex-1 truncate text-sm font-semibold text-ink">{f?.nome ?? "—"}</span>
+                    {marcacao && (
+                      <label className="flex items-center gap-1.5 text-xs text-slate-600">
+                        <input type="checkbox" checked={l.paga} onChange={(e) => mudarLinha(i, { paga: e.target.checked })} className="h-4 w-4 accent-accent" />
+                        paga
+                      </label>
+                    )}
+                    <button type="button" onClick={() => tirar(i)} disabled={l.paga} aria-label={`Tirar ${f?.nome ?? ""}`} className="grid h-8 w-8 place-items-center rounded-full text-lg text-slate-500 hover:bg-white hover:text-rose-700 disabled:opacity-40">×</button>
+                  </div>
+                  <div className="mt-1.5 grid grid-cols-3 gap-2">
+                    <label className="text-[11px] text-slate-500">
+                      Horas
+                      <input type="number" min="0" step="0.25" inputMode="decimal" value={l.horas} onChange={(e) => mudarLinha(i, { horas: e.target.value })} placeholder="—" className="campo mt-0.5 h-10 px-2" />
+                    </label>
+                    <label className="text-[11px] text-slate-500">
+                      €/hora
+                      <input type="number" min="0" step="0.01" inputMode="decimal" value={l.taxa} onChange={(e) => mudarLinha(i, { taxa: e.target.value })} className="campo mt-0.5 h-10 px-2" />
+                    </label>
+                    <label className="text-[11px] text-slate-500">
+                      Recebe (€)
+                      <input type="number" min="0" step="0.01" inputMode="decimal" value={l.valor} onChange={(e) => mudarLinha(i, { valor: e.target.value, valorManual: true })} placeholder="0" className={`campo mt-0.5 h-10 px-2 ${l.valorManual ? "" : "text-slate-600"}`} />
+                    </label>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          {disponiveis.length > 0 ? (
+            <select value="" onChange={(e) => juntar(e.target.value)} aria-label="Juntar funcionária" className="campo mt-2">
+              <option value="">+ Juntar funcionária…</option>
+              {disponiveis.map((f) => (
+                <option key={f.id} value={f.id}>{f.nome}{f.taxa_hora > 0 ? ` — ${f.taxa_hora.toFixed(2)} €/h` : ""}</option>
+              ))}
+            </select>
+          ) : funcionarias.length === 0 ? (
+            <p className="mt-2 text-xs text-slate-500">Sem funcionárias. Crie-as na página Equipa.</p>
+          ) : null}
+          <p className="mt-2 text-xs text-slate-500">
+            Equipa {moeda(totalEquipa)} · gestora {moeda(gestora)} · <span className={sobra < 0 ? "font-semibold text-rose-700" : ""}>sobra {moeda(sobra)}</span>
+          </p>
+        </fieldset>
+
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" checked={clientePagou} onChange={(e) => setClientePagou(e.target.checked)} className="h-5 w-5 accent-accent" />
+          Cliente pagou
+        </label>
         <label>
           <span className="rotulo">Notas</span>
           <textarea value={notas} onChange={(e) => setNotas(e.target.value)} rows={2} className="campo h-auto py-2" />
@@ -233,7 +304,7 @@ export function FormMarcacao({ clientes, locais, funcionarias, marcacao, dataIni
           <label>
             <span className="rotulo">Repetir todas as semanas até</span>
             <input type="date" value={repetirAte} min={data} onChange={(e) => setRepetirAte(e.target.value)} className="campo" />
-            <span className="mt-1 block text-xs text-slate-500">Vazio = só esta marcação. Cria uma marcação por semana, no mesmo dia e hora.</span>
+            <span className="mt-1 block text-xs text-slate-500">Vazio = só esta marcação. Cria uma marcação por semana, no mesmo dia e hora, com a mesma equipa.</span>
           </label>
         )}
         {erro && <div role="alert" className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">{erro}</div>}
@@ -249,15 +320,22 @@ export function FormMarcacao({ clientes, locais, funcionarias, marcacao, dataIni
           )}
         </div>
       </form>
-      {marcacao && funcionariaEscolhida && (
+      {marcacao && equipaGuardada.length > 0 && (
         <div className="mt-5 border-t border-line pt-4">
-          {emailAviso ? (
-            <a href={mailto(funcionariaEscolhida.email!, emailAviso.assunto, emailAviso.corpo)} className="botao-secundario w-full">
-              Avisar {funcionariaEscolhida.nome.split(" ")[0]} por email
-            </a>
-          ) : (
-            <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-              {funcionariaEscolhida.nome} não tem email. Acrescenta-o na página Equipa para a avisar daqui.
+          <div className="flex flex-wrap gap-2">
+            {equipaGuardada.filter((f) => f.email).map((f) => {
+              const colegas = equipaGuardada.filter((o) => o.id !== f.id).map((o) => o.nome);
+              const { assunto, corpo } = emailDaMarcacao(marcacao, f, nomes, colegas);
+              return (
+                <a key={f.id} href={mailto(f.email!, assunto, corpo)} className="botao-secundario">
+                  Avisar {f.nome.split(" ")[0]} por email
+                </a>
+              );
+            })}
+          </div>
+          {semEmail.length > 0 && (
+            <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+              {semEmail.map((f) => f.nome).join(", ")} sem email. Acrescenta-o na página Equipa para avisar daqui.
             </p>
           )}
           <p className="mt-2 text-xs text-slate-500">Abre a tua app de email com o texto pronto. Se mudaste algo, guarda primeiro.</p>

@@ -27,6 +27,15 @@ Estado a 2026-09-27. Atualizar ao fechar cada ponto.
 - Email por funcionária no perfil.
 - Avisos por `mailto:` (0 €, saem da conta da gestora): botão «Avisar … por email» ao editar uma marcação com funcionária; «Enviar plano do dia» no painel, um botão por funcionária com marcações nesse dia. Textos em `src/lib/emailEquipa.ts`.
 
+## Equipa por horas + valor da gestora (2026-09-29)
+
+Pedido: várias funcionárias por limpeza; pagas à hora (horas definíveis na hora ou depois); a gestora também limpa e define o que recebe por serviço; sem percentagens (o 55 % desapareceu).
+
+1. **Aplicar a migração `supabase/migrations/202609290004_equipa_por_horas.sql`** no SQL Editor. Cria `marcacoes_funcionarias`, `funcionarias.taxa_hora`, `marcacoes.valor_gestora`, `clientes_locais.valor_gestora`; migra as marcações antigas (funcionária + valor passam para uma participação) e **apaga** `marcacoes.funcionaria_id/valor_funcionaria/funcionaria_paga` e `clientes_locais.valor_funcionaria`.
+2. **Só depois: push de `main`** (o código novo lê `marcacoes_funcionarias`; o código antigo lê colunas que a migração apaga — a ordem é migração → deploy).
+3. **Republicar a Edge Function `pedido-limpeza`** (PowerShell, como da outra vez: `C:\Users\gffth\bin\supabase.exe functions deploy pedido-limpeza --no-verify-jwt --project-ref nspellvudlwpkwfbgvrg`). A versão publicada escreve `valor_funcionaria`, que deixa de existir: sem republicar, os pedidos do PV falham com «column does not exist».
+4. Equipa: preencher o **valor à hora** de cada funcionária (página Equipa). Locais do PV: coluna «gestora» = o que a Alice recebe por villa.
+
 ## Depois (não iniciado)
 
 - Envio automático (Gmail da gestora via SMTP numa Edge Function) reaproveitando os textos de `emailEquipa.ts`; registo «avisada em …» por marcação.

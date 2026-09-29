@@ -27,8 +27,9 @@ Com Supabase:
 | Tabela | Para quê |
 |---|---|
 | `clientes` | Quem contrata. `origem`/`referencia_externa` reservam lugar para clientes vindos de integrações (ex.: Paradise Villas). |
-| `funcionarias` | Equipa. |
-| `marcacoes` | Um serviço: cliente, funcionária, data/hora, valor cobrado, valor a pagar à funcionária (sugestão 55%), `cliente_pagou`, `funcionaria_paga`. |
+| `funcionarias` | Equipa. `taxa_hora` = valor por hora (preenche a taxa ao juntá-la a uma limpeza). |
+| `marcacoes` | Um serviço: cliente (+ local), data/hora, valor cobrado, `valor_gestora` (o que a gestora recebe por este serviço — ela também limpa; valor fixo, nunca percentagem), `cliente_pagou`. |
+| `marcacoes_funcionarias` | Quem fez cada limpeza (N por marcação): `horas` × `taxa_hora` = `valor` (editável à mão), `paga`. Horas vazias = por definir depois do serviço. |
 | `despesas` | Despesas por tipo (produtos, consumíveis, equipamento, deslocações, lavandaria, outros). |
 
 Estado de uma marcação deriva-se, não se guarda: `cliente_pagou` → Recebido; data passada sem pagamento → Em atraso; resto → Pendente.
@@ -36,7 +37,7 @@ Estado de uma marcação deriva-se, não se guarda: `cliente_pagou` → Recebido
 ## Páginas
 
 - `/` Painel — KPIs do mês, calendário, marcações do dia escolhido.
-- `/contas` — Receitas (clicar no estado alterna pago/por pagar), pagamentos à equipa («Marcar pago» liquida todos os serviços por pagar da funcionária no mês), despesas.
+- `/contas` — Receitas (clicar no estado alterna pago/por pagar), pagamentos à equipa (tocar no nome abre os serviços do mês com horas/valor editáveis; «Pagar» liquida tudo o que está por pagar à funcionária), despesas.
 - `/clientes`, `/equipa` — cadastro.
 
 O mês em vista vai na query string (`?mes=2026-09`).

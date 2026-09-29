@@ -3,13 +3,13 @@ import { emailDaMarcacao, emailDoPlano, mailto, moradaDaMarcacao, type Nomes } f
 import type { Cliente, Funcionaria, Local, Marcacao } from "./modelo";
 
 const cliente: Cliente = { id: "c1", nome: "Paradise Villas", morada: "Algarve", telefone: null, email: null, notas: null, ativo: true, origem: "paradise-villas", referencia_externa: "pv" };
-const local: Local = { id: "l1", cliente_id: "c1", nome: "Villa Paulo", morada: "Vale do Lobo, lote 3", preco_acordado: 120, valor_funcionaria: 60, ativo: true, referencia_externa: "v1" };
-const ana: Funcionaria = { id: "f1", nome: "Ana Rocha", telefone: null, email: "ana@exemplo.pt", ativa: true };
+const local: Local = { id: "l1", cliente_id: "c1", nome: "Villa Paulo", morada: "Vale do Lobo, lote 3", preco_acordado: 120, valor_gestora: 40, ativo: true, referencia_externa: "v1" };
+const ana: Funcionaria = { id: "f1", nome: "Ana Rocha", telefone: null, email: "ana@exemplo.pt", taxa_hora: 9, ativa: true };
 const nomes: Nomes = { clientes: new Map([[cliente.id, cliente]]), locais: new Map([[local.id, local]]) };
 
 const marcacao: Marcacao = {
-  id: "m1", cliente_id: "c1", local_id: "l1", funcionaria_id: "f1", data: "2026-10-08", hora: "10:00:00",
-  valor_cobrado: 120, valor_funcionaria: 60, cliente_pagou: false, funcionaria_paga: false, notas: "Chave na caixa",
+  id: "m1", cliente_id: "c1", local_id: "l1", data: "2026-10-08", hora: "10:00:00",
+  valor_cobrado: 120, valor_gestora: 40, cliente_pagou: false, notas: "Chave na caixa",
   origem: "paradise-villas", referencia_externa: "r1",
   detalhes: { nome_hospede: "Smith", numero_hospedes: 4, checkin: "2026-10-01", checkout: "2026-10-08", extras: [{ nome: "Berço", quantidade: 1 }] },
 };
@@ -31,6 +31,12 @@ describe("emailDaMarcacao", () => {
     expect(corpo).toContain("Hóspedes: 4");
     expect(corpo).toContain("Extras: 1× Berço");
     expect(corpo).toContain("Notas: Chave na caixa");
+    expect(corpo).not.toContain("Com:");
+  });
+
+  it("diz com quem vai quando há mais funcionárias", () => {
+    const { corpo } = emailDaMarcacao(marcacao, ana, nomes, ["Marta Silva", "Cátia Nunes"]);
+    expect(corpo).toContain("Com: Marta, Cátia");
   });
 });
 

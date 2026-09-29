@@ -38,7 +38,8 @@ function linhasDosDetalhes(m: Marcacao): string[] {
   return linhas;
 }
 
-export function emailDaMarcacao(m: Marcacao, funcionaria: Funcionaria, nomes: Nomes): { assunto: string; corpo: string } {
+/** `colegas`: nomes das outras funcionárias na mesma limpeza, se houver. */
+export function emailDaMarcacao(m: Marcacao, funcionaria: Funcionaria, nomes: Nomes, colegas: string[] = []): { assunto: string; corpo: string } {
   const sitio = sitioDaMarcacao(m, nomes);
   const morada = moradaDaMarcacao(m, nomes);
   const quando = `${diaLongo(m.data)}${m.hora ? ` às ${hora(m.hora)}` : ""}`;
@@ -50,6 +51,7 @@ export function emailDaMarcacao(m: Marcacao, funcionaria: Funcionaria, nomes: No
     `Quando: ${quando}`,
     `Onde: ${sitio}`,
     ...(morada ? [`Morada: ${morada}`] : []),
+    ...(colegas.length > 0 ? [`Com: ${colegas.map(primeiroNome).join(", ")}`] : []),
     ...linhasDosDetalhes(m),
     "",
     "Se não puderes, responde a este email o quanto antes.",

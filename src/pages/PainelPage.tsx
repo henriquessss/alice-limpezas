@@ -8,9 +8,9 @@ import { SeletorMes } from "../components/SeletorMes";
 import { useDadosDoMes } from "../lib/dados";
 import { grelhaDoMes, hojeIso, mesDe } from "../lib/datas";
 import { emailDoPlano, mailto } from "../lib/emailEquipa";
-import { diaLongo, hora, moeda, moedaInteira, percentagem } from "../lib/format";
+import { diaLongo, hora, moeda, moedaInteira } from "../lib/format";
 import { useMes } from "../lib/mes";
-import { ROTULO_ESTADO, estadoDaMarcacao, nomeDaMarcacao, resumoDoMes, type Marcacao } from "../lib/modelo";
+import { ROTULO_ESTADO, estadoDaMarcacao, nomeDaMarcacao, participacoesPorMarcacao, resumoDoMes, type Marcacao } from "../lib/modelo";
 
 const DIAS_SEMANA = ["S", "T", "Q", "Q", "S", "S", "D"];
 const DIAS_SEMANA_LONGOS = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
@@ -27,7 +27,7 @@ export function PainelPage() {
   const dia = mesDe(diaEscolhido) === mes ? diaEscolhido : `${mes}-01`;
 
   const resumo = useMemo(
-    () => (dados.estado === "pronto" ? resumoDoMes(dados.marcacoes, dados.despesas, hoje) : undefined),
+    () => (dados.estado === "pronto" ? resumoDoMes(dados.marcacoes, dados.participacoes, dados.despesas, hoje) : undefined),
     [dados, hoje],
   );
 
@@ -46,12 +46,13 @@ export function PainelPage() {
   const nomeLocal = new Map(dados.locais.map((l) => [l.id, l.nome]));
   const nome = (m: Marcacao) => nomeDaMarcacao(m, nomeCliente, nomeLocal);
   const nomeFuncionaria = new Map(dados.funcionarias.map((f) => [f.id, f.nome]));
+  const equipaDe = participacoesPorMarcacao(dados.participacoes);
   const porDia = new Map<string, Marcacao[]>();
   for (const m of dados.marcacoes) porDia.set(m.data, [...(porDia.get(m.data) ?? []), m]);
   const doDia = porDia.get(dia) ?? [];
   const nomes = { clientes: new Map(dados.clientes.map((c) => [c.id, c])), locais: new Map(dados.locais.map((l) => [l.id, l])) };
   const equipaDoDia = dados.funcionarias
-    .map((f) => ({ funcionaria: f, marcacoes: doDia.filter((m) => m.funcionaria_id === f.id) }))
+    .map((f) => ({ funcionaria: f, marcacoes: doDia.filter((m) => equipaDe.get(m.id)?.some((p) => p.funcionaria_id === f.id)) }))
     .filter((x) => x.marcacoes.length > 0);
 
   return (
@@ -70,7 +71,12 @@ export function PainelPage() {
           }
         />
         <Kpi titulo="Custos" valor={moedaInteira(resumo!.custos)} detalhe={`${moedaInteira(resumo!.custoEquipa)} equipa · ${moedaInteira(resumo!.despesas)} despesas`} />
-        <Kpi titulo="Lucro" valor={moedaInteira(resumo!.lucro)} detalhe={`margem ${percentagem(resumo!.margem)} · ${moedaInteira(resumo!.porPagarEquipa)} por pagar`} destaque />
+        <Kpi
+          titulo="Lucro"
+          valor={moedaInteira(resumo!.lucro)}
+          detalhe={`gestora ${moedaInteira(resumo!.gestora)} · ${resumo!.sobra < 0 ? "falta" : "sobra"} ${moedaInteira(Math.abs(resumo!.sobra))}`}
+          destaque
+        />
       </section>
 
       <section className="mt-4 grid gap-4 sm:mt-6 lg:grid-cols-[1fr_minmax(18rem,22rem)]">
@@ -145,6 +151,8 @@ export function PainelPage() {
             <ul className="divide-y divide-line">
               {doDia.map((m) => {
                 const estado = estadoDaMarcacao(m, hoje);
+                const equipa = equipaDe.get(m.id) ?? [];
+                const horasPorDefinir = m.data <= hoje && equipa.some((p) => p.horas === null && p.valor === 0);
                 return (
                   <li key={m.id}>
                     <button type="button" onClick={() => setFormulario({ modo: "editar", marcacao: m })} className="grid w-full gap-1 px-4 py-3.5 text-left active:bg-mist md:hover:bg-mist">
@@ -156,7 +164,10 @@ export function PainelPage() {
                         <span className="shrink-0 tabular-nums text-sm font-semibold">{moeda(m.valor_cobrado)}</span>
                       </div>
                       <div className="flex items-center justify-between gap-3 text-xs text-slate-600">
-                        <span>{m.funcionaria_id ? nomeFuncionaria.get(m.funcionaria_id) : <em>por atribuir</em>}</span>
+                        <span className="min-w-0 truncate">
+                          {equipa.length === 0 ? <em>por atribuir</em> : equipa.map((p) => nomeFuncionaria.get(p.funcionaria_id)?.split(" ")[0] ?? "?").join(", ")}
+                          {horasPorDefinir && <span className="ml-1.5 rounded-full bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800">horas por definir</span>}
+                        </span>
                         <span style={{ color: COR_ESTADO[estado] }} className="font-semibold">{ROTULO_ESTADO[estado]}</span>
                       </div>
                       {m.notas && <p className="text-xs text-slate-500">{m.notas}</p>}
@@ -202,6 +213,7 @@ export function PainelPage() {
           locais={dados.locais}
           funcionarias={dados.funcionarias}
           marcacao={formulario.modo === "editar" ? formulario.marcacao : undefined}
+          participacoes={formulario.modo === "editar" ? equipaDe.get(formulario.marcacao.id) ?? [] : undefined}
           dataInicial={formulario.modo === "nova" ? formulario.data : undefined}
           aoFechar={() => setFormulario({ modo: "fechado" })}
           aoGuardar={recarregar}

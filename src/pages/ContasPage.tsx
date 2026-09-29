@@ -8,9 +8,9 @@ import { SeletorMes } from "../components/SeletorMes";
 import { operacoes, useDadosDoMes } from "../lib/dados";
 import { hojeIso } from "../lib/datas";
 import { mensagemDeErro } from "../lib/erros";
-import { diaMes, moeda, percentagem } from "../lib/format";
+import { diaMes, horasTexto, moeda, percentagem } from "../lib/format";
 import { useMes } from "../lib/mes";
-import { CORES_DESPESA, despesasPorTipo, estadoDaMarcacao, nomeDaMarcacao, resumoPorFuncionaria, type Despesa } from "../lib/modelo";
+import { CORES_DESPESA, despesasPorTipo, estadoDaMarcacao, nomeDaMarcacao, resumoPorFuncionaria, valorDaParticipacao, type Despesa, type Marcacao, type Participacao } from "../lib/modelo";
 
 type Formulario = { modo: "fechado" } | { modo: "nova" } | { modo: "editar"; despesa: Despesa };
 
@@ -25,6 +25,7 @@ export function ContasPage() {
   const [ocupado, setOcupado] = useState(false);
   // "cliente:<id>" ou "local:<id>"; vazio = tudo. Só filtra as receitas.
   const [filtro, setFiltro] = useState("");
+  const [funcionariaAberta, setFuncionariaAberta] = useState<string>();
 
   const executar = async (acao: () => Promise<unknown>, fallback: string) => {
     setErro(undefined);
@@ -55,9 +56,11 @@ export function ContasPage() {
     !filtro || (tipoFiltro === "cliente" ? m.cliente_id === idFiltro : m.local_id === idFiltro),
   );
   const clientesComMarcacoes = dados.clientes.filter((c) => dados.marcacoes.some((m) => m.cliente_id === c.id));
-  const equipa = resumoPorFuncionaria(dados.funcionarias, dados.marcacoes);
+  const marcacaoPorId = new Map(dados.marcacoes.map((m) => [m.id, m]));
+  const equipa = resumoPorFuncionaria(dados.funcionarias, dados.participacoes);
   const totalEquipa = equipa.reduce((s, r) => s + r.aReceber, 0);
   const totalPorPagar = equipa.reduce((s, r) => s + r.porPagar, 0);
+  const totalGestora = dados.marcacoes.reduce((s, m) => s + m.valor_gestora, 0);
   const porTipo = despesasPorTipo(dados.despesas);
   const totalDespesas = dados.despesas.reduce((s, d) => s + d.valor, 0);
   const totalReceita = receitas.reduce((s, m) => s + m.valor_cobrado, 0);
@@ -67,7 +70,20 @@ export function ContasPage() {
 
   const marcarPago = (nome: string, valor: number, ids: string[]) => {
     if (!window.confirm(`Marcar ${moeda(valor)} como pago a ${nome}?`)) return;
-    void executar(() => operacoes.marcarFuncionariaPaga(ids), "Não foi possível registar o pagamento.");
+    void executar(() => operacoes.marcarParticipacoesPagas(ids), "Não foi possível registar o pagamento.");
+  };
+
+  // Horas escritas depois do serviço: o valor segue a taxa da participação.
+  const guardarHoras = (p: Participacao, texto: string) => {
+    const horas = texto.trim() === "" ? null : Number(texto.replace(",", ".")) || 0;
+    if (horas === p.horas) return;
+    void executar(() => operacoes.atualizarParticipacao(p.id, { horas, valor: valorDaParticipacao(horas, p.taxa_hora) }), "Não foi possível guardar as horas.");
+  };
+
+  const guardarValor = (p: Participacao, texto: string) => {
+    const valor = Number(texto.replace(",", ".")) || 0;
+    if (valor === p.valor) return;
+    void executar(() => operacoes.atualizarParticipacao(p.id, { valor }), "Não foi possível guardar o valor.");
   };
 
   return (
@@ -145,72 +161,87 @@ export function ContasPage() {
 
         {/* ---------------- Equipa ---------------- */}
         <div className="painel self-start overflow-hidden">
-          <div className="border-b border-line px-4 py-3">
+          <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
             <h2 className="text-xs font-bold uppercase tracking-wider text-slate-600">Pagamentos à equipa</h2>
+            <span className="text-xs text-slate-500">gestora {moeda(totalGestora)}</span>
           </div>
           {equipa.length === 0 ? (
             <p className="px-4 py-8 text-center text-sm text-slate-500">Sem funcionárias. Crie-as na página Equipa.</p>
           ) : (
-            <>
-              <ul className="divide-y divide-line md:hidden">
-                {equipa.map((r) => (
-                  <li key={r.funcionaria.id} className="flex items-center gap-3 px-4 py-3">
-                    <div className="min-w-0 flex-1">
-                      <p className="font-semibold text-ink">{r.funcionaria.nome}</p>
-                      <p className="text-xs text-slate-500">{r.servicos} serviços · {moeda(r.aReceber)} no mês</p>
-                    </div>
-                    {r.porPagar > 0 ? (
-                      <button type="button" disabled={ocupado} onClick={() => marcarPago(r.funcionaria.nome, r.porPagar, r.marcacoesPorPagar)} className="botao-primario h-9 px-3 text-xs">
-                        Pagar {moeda(r.porPagar)}
+            <ul className="divide-y divide-line">
+              {equipa.map((r) => {
+                const aberta = funcionariaAberta === r.funcionaria.id;
+                const suas = dados.participacoes
+                  .filter((p) => p.funcionaria_id === r.funcionaria.id)
+                  .map((p) => ({ p, m: marcacaoPorId.get(p.marcacao_id) }))
+                  .filter((x): x is { p: Participacao; m: Marcacao } => Boolean(x.m))
+                  .sort((a, b) => `${a.m.data} ${a.m.hora ?? ""}`.localeCompare(`${b.m.data} ${b.m.hora ?? ""}`));
+                return (
+                  <li key={r.funcionaria.id}>
+                    <div className="flex items-center gap-3 px-4 py-3">
+                      <button type="button" onClick={() => setFuncionariaAberta(aberta ? undefined : r.funcionaria.id)} aria-expanded={aberta} className="min-w-0 flex-1 text-left">
+                        <p className="font-semibold text-ink">{r.funcionaria.nome}</p>
+                        <p className="text-xs text-slate-500">
+                          {r.servicos} {r.servicos === 1 ? "serviço" : "serviços"} · {horasTexto(r.horas)} · {moeda(r.aReceber)} no mês
+                          {r.semValor > 0 && <span className="ml-1.5 rounded-full bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800">{r.semValor} por definir</span>}
+                        </p>
                       </button>
-                    ) : (
-                      <span className="text-xs font-semibold text-emerald-700">Em dia</span>
+                      {r.porPagar > 0 ? (
+                        <button type="button" disabled={ocupado} onClick={() => marcarPago(r.funcionaria.nome, r.porPagar, r.participacoesPorPagar)} className="botao-primario h-9 shrink-0 px-3 text-xs">
+                          Pagar {moeda(r.porPagar)}
+                        </button>
+                      ) : (
+                        <span className="shrink-0 text-xs font-semibold text-emerald-700">Em dia</span>
+                      )}
+                    </div>
+                    {aberta && (
+                      <ul className="divide-y divide-line border-t border-line bg-sand/50">
+                        {suas.length === 0 && <li className="px-4 py-3 text-xs text-slate-500">Sem serviços neste mês.</li>}
+                        {suas.map(({ p, m }) => (
+                          <li key={p.id} className="grid grid-cols-[1fr_4.5rem_5.5rem] items-center gap-2 px-4 py-2 text-sm">
+                            <div className="min-w-0">
+                              <p className="truncate text-ink"><span className="tabular-nums text-slate-500">{diaMes(m.data)}</span> {nomeDaMarcacao(m, nomeCliente, nomeLocal)}</p>
+                              <p className="text-[11px] text-slate-500">{p.paga ? <span className="font-semibold text-emerald-700">paga</span> : `${p.taxa_hora.toFixed(2)} €/h`}</p>
+                            </div>
+                            <input
+                              key={`h-${p.id}-${p.horas ?? ""}`}
+                              type="number"
+                              min="0"
+                              step="0.25"
+                              inputMode="decimal"
+                              defaultValue={p.horas ?? ""}
+                              placeholder="horas"
+                              aria-label="Horas"
+                              disabled={p.paga || ocupado}
+                              onBlur={(e) => guardarHoras(p, e.target.value)}
+                              className="campo h-10 px-2 text-right disabled:bg-transparent"
+                            />
+                            <input
+                              key={`v-${p.id}-${p.valor}`}
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              inputMode="decimal"
+                              defaultValue={p.valor || ""}
+                              placeholder="€"
+                              aria-label="Valor"
+                              disabled={p.paga || ocupado}
+                              onBlur={(e) => guardarValor(p, e.target.value)}
+                              className="campo h-10 px-2 text-right font-semibold disabled:bg-transparent"
+                            />
+                          </li>
+                        ))}
+                      </ul>
                     )}
                   </li>
-                ))}
-                <li className="flex justify-between px-4 py-3 text-sm font-semibold">
-                  <span>Por pagar</span><span className="tabular-nums">{moeda(totalPorPagar)}</span>
-                </li>
-              </ul>
-              <table className="hidden w-full text-sm md:table">
-                <thead className={cabecalhoTabela}>
-                  <tr>
-                    <th className="px-4 py-2 font-semibold">Funcionária</th>
-                    <th className="px-2 py-2 text-right font-semibold">Serviços</th>
-                    <th className="px-2 py-2 text-right font-semibold">A receber</th>
-                    <th className="px-2 py-2 text-right font-semibold">Por pagar</th>
-                    <th className="px-4 py-2" />
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-line">
-                  {equipa.map((r) => (
-                    <tr key={r.funcionaria.id}>
-                      <td className="px-4 py-2 text-ink">{r.funcionaria.nome}</td>
-                      <td className="px-2 py-2 text-right tabular-nums">{r.servicos}</td>
-                      <td className="px-2 py-2 text-right tabular-nums">{moeda(r.aReceber)}</td>
-                      <td className="px-2 py-2 text-right tabular-nums">
-                        {r.porPagar > 0 ? <span className="rounded-full bg-amber-50 px-2 py-0.5 font-semibold text-amber-800">{moeda(r.porPagar)}</span> : <span className="text-slate-400">—</span>}
-                      </td>
-                      <td className="px-4 py-2 text-right">
-                        {r.porPagar > 0 && (
-                          <button type="button" disabled={ocupado} onClick={() => marcarPago(r.funcionaria.nome, r.porPagar, r.marcacoesPorPagar)} className="botao-secundario h-8 px-3 text-xs">
-                            Marcar pago
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-                <tfoot>
-                  <tr className="border-t border-line font-semibold">
-                    <td className="px-4 py-2" colSpan={2}>Total equipa</td>
-                    <td className="px-2 py-2 text-right tabular-nums">{moeda(totalEquipa)}</td>
-                    <td className="px-2 py-2 text-right tabular-nums">{moeda(totalPorPagar)}</td>
-                    <td />
-                  </tr>
-                </tfoot>
-              </table>
-            </>
+                );
+              })}
+              <li className="grid gap-1 px-4 py-3 text-sm">
+                <div className="flex justify-between font-semibold"><span>Por pagar à equipa</span><span className="tabular-nums">{moeda(totalPorPagar)}</span></div>
+                <div className="flex justify-between text-slate-600"><span>Equipa no mês</span><span className="tabular-nums">{moeda(totalEquipa)}</span></div>
+                <div className="flex justify-between text-slate-600"><span>Gestora recebe</span><span className="tabular-nums">{moeda(totalGestora)}</span></div>
+              </li>
+            </ul>
           )}
         </div>
       </section>
